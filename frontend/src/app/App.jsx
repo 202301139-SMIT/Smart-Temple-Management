@@ -28,6 +28,7 @@ import {
   MapPin,
   Star,
   ChevronRight,
+  ChevronLeft,
   Menu,
   X,
   LogIn,
@@ -47,6 +48,8 @@ import {
   Activity,
   AlertTriangle,
   Leaf,
+  Compass,
+  Ticket,
 } from "lucide-react";
 
 // ─── 3D and Interactive Dashboard Component Imports ──────────────────────
@@ -57,6 +60,7 @@ import InteractiveWaitSimulator from "./components/dashboard/InteractiveWaitSimu
 import TempleResourceRadar from "./components/dashboard/TempleResourceRadar";
 import CrowdCorrelationChart from "./components/dashboard/CrowdCorrelationChart";
 import ServiceSpecificAnalytics from "./components/dashboard/ServiceSpecificAnalytics";
+import PilgrimIntelligenceCenter, { PilgrimBookingCenter } from "./components/dashboard/PilgrimIntelligenceCenter";
 
 
 // ─── Chart Data ──────────────────────────────────────────────────────────────
@@ -177,7 +181,7 @@ function Navbar({ currentPage, setPage }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const isDashboard = ["pilgrim", "hotel", "travel", "temple"].includes(
+  const isDashboard = ["pilgrim", "hotel", "travel", "temple", "booking_center"].includes(
     currentPage,
   );
 
@@ -210,7 +214,7 @@ function Navbar({ currentPage, setPage }) {
         <div className="hidden md:flex items-center gap-6">
           {isDashboard ? (
             <>
-              {["pilgrim", "hotel", "travel", "temple"].map((p) => (
+              {["pilgrim", "booking_center", "hotel", "travel", "temple"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
@@ -224,7 +228,9 @@ function Navbar({ currentPage, setPage }) {
                     ? "Temple Mgmt"
                     : p === "travel"
                       ? "Travel Agency"
-                      : p.charAt(0).toUpperCase() + p.slice(1)}
+                      : p === "booking_center"
+                        ? "Ticket & Services"
+                        : p.charAt(0).toUpperCase() + p.slice(1)}
                 </button>
               ))}
               <button
@@ -1189,7 +1195,7 @@ function LandingPage({ setPage }) {
 }
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
-function LoginPage({ setPage }) {
+function LoginPage({ setPage, setUserRole }) {
   const [showPw, setShowPw] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1303,7 +1309,21 @@ function LoginPage({ setPage }) {
             </div>
 
             <button
-              onClick={() => setPage("pilgrim")}
+              onClick={() => {
+                let role = "pilgrim";
+                const lowerEmail = email.toLowerCase();
+                if (lowerEmail.includes("gov")) {
+                  role = "government";
+                } else if (lowerEmail.includes("admin") || lowerEmail.includes("temple")) {
+                  role = "temple";
+                } else if (lowerEmail.includes("hotel")) {
+                  role = "hotel";
+                } else if (lowerEmail.includes("travel")) {
+                  role = "travel";
+                }
+                setUserRole(role);
+                setPage(role);
+              }}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2"
             >
               Sign In
@@ -1315,23 +1335,24 @@ function LoginPage({ setPage }) {
               <div className="flex-1 h-px bg-[#B8860B]/15" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {["Pilgrim", "Hotel", "Travel Agency", "Temple Admin"].map(
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {["Pilgrim", "Government", "Hotel", "Travel Agency", "Temple Admin"].map(
                 (role) => (
                   <button
                     key={role}
-                    onClick={() =>
-                      setPage(
-                        role === "Pilgrim"
-                          ? "pilgrim"
-                          : role === "Hotel"
-                            ? "hotel"
-                            : role === "Travel Agency"
-                              ? "travel"
-                              : "temple",
-                      )
-                    }
-                    className="py-2.5 px-3 rounded-xl border border-[#B8860B]/20 text-[#5C3A1E] text-xs font-medium hover:border-[#B8860B]/50 hover:bg-[#B8860B]/5 transition-colors"
+                    onClick={() => {
+                      const pageMap = {
+                        "Pilgrim": "pilgrim",
+                        "Government": "government",
+                        "Hotel": "hotel",
+                        "Travel Agency": "travel",
+                        "Temple Admin": "temple"
+                      };
+                      const targetRole = pageMap[role];
+                      setUserRole(targetRole);
+                      setPage(targetRole);
+                    }}
+                    className="py-2 px-2 rounded-xl border border-[#B8860B]/20 text-[#5C3A1E] text-[10px] font-medium hover:border-[#B8860B]/50 hover:bg-[#B8860B]/5 transition-colors text-center truncate"
                   >
                     {role}
                   </button>
@@ -1356,7 +1377,7 @@ function LoginPage({ setPage }) {
 }
 
 // ─── Register Page ────────────────────────────────────────────────────────────
-function RegisterPage({ setPage }) {
+function RegisterPage({ setPage, setUserRole }) {
   const [userType, setUserType] = useState("pilgrim");
 
   return (
@@ -1426,11 +1447,11 @@ function RegisterPage({ setPage }) {
 
           {/* User type tabs */}
           <div className="flex gap-1 p-1 bg-white rounded-xl border border-[#B8860B]/15 mb-6">
-            {["pilgrim", "hotel", "travel"].map((t) => (
+            {["pilgrim", "government", "hotel", "travel"].map((t) => (
               <button
                 key={t}
                 onClick={() => setUserType(t)}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                className={`flex-1 py-2 rounded-lg text-[10px] font-medium transition-all ${
                   userType === t
                     ? "bg-[#B8860B] text-white shadow-sm"
                     : "text-[#8B6B47] hover:text-[#B8860B]"
@@ -1438,9 +1459,11 @@ function RegisterPage({ setPage }) {
               >
                 {t === "pilgrim"
                   ? "Pilgrim"
-                  : t === "hotel"
-                    ? "Hotel Partner"
-                    : "Travel Agency"}
+                  : t === "government"
+                    ? "Government"
+                    : t === "hotel"
+                      ? "Hotel Partner"
+                      : "Travel Agency"}
               </button>
             ))}
           </div>
@@ -1532,17 +1555,22 @@ function RegisterPage({ setPage }) {
                 />
               </>
             )}
+            {userType === "government" && (
+              <>
+                <FormField label="Official Name" placeholder="Dr. R. K. Prasad" />
+                <FormField label="Department" placeholder="Ministry of Endowments" />
+                <FormField label="Government ID / Badge" placeholder="GOV-AP-9827" />
+                <FormField label="Official Email Address" type="email" placeholder="prasad.rk@ap.gov.in" />
+                <FormField label="Mobile Number" type="tel" placeholder="+91 94400 12345" />
+                <FormField label="Password" type="password" placeholder="••••••••" />
+              </>
+            )}
 
             <button
-              onClick={() =>
-                setPage(
-                  userType === "pilgrim"
-                    ? "pilgrim"
-                    : userType === "hotel"
-                      ? "hotel"
-                      : "travel",
-                )
-              }
+              onClick={() => {
+                setUserRole(userType);
+                setPage(userType);
+              }}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2"
             >
               Create Account & Continue
@@ -1593,29 +1621,45 @@ function FormField({ label, type = "text", placeholder }) {
 }
 
 // ─── Dashboard Shell ──────────────────────────────────────────────────────────
-function DashboardShell({ title, subtitle, children, setPage, currentPage }) {
-  const navItems = [
-    { page: "pilgrim", label: "Pilgrim", icon: Users },
-    { page: "hotel", label: "Hotel", icon: Hotel },
+function DashboardShell({ title, subtitle, children, setPage, currentPage, userRole, setUserRole }) {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const allNavItems = [
+    { page: "government", label: "Government Analytics", icon: Building2 },
+    { page: "pilgrim", label: "Pilgrim Details", icon: Users },
+    { page: "booking_center", label: "Ticket & Services", icon: Ticket },
+    { page: "hotel", label: "Hotel Partner", icon: Hotel },
     { page: "travel", label: "Travel Agency", icon: Truck },
     { page: "temple", label: "Temple Mgmt", icon: Shield },
   ];
 
+  const navItems = allNavItems.filter(({ page }) => {
+    if (page === "pilgrim") return true;
+    if (page === "booking_center") return true;
+    if (!userRole) return false;
+    if (page === "government") return userRole === "government";
+    if (page === "temple") return userRole === "temple";
+    if (page === "hotel") return userRole === "hotel" || userRole === "temple";
+    if (page === "travel") return userRole === "travel" || userRole === "temple";
+    return false;
+  });
+
   return (
-    <div className="min-h-screen bg-[#FFF8E7] flex">
+    <div className="min-h-screen bg-[#FFF8E7] flex pt-16">
       {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 bg-white border-r border-[#B8860B]/10 fixed left-0 top-0 bottom-0 z-30">
-        <div className="h-16 flex items-center px-5 border-b border-[#B8860B]/10">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#B8860B] to-[#8B4513] flex items-center justify-center">
-              <span className="text-white text-[10px] font-cinzel font-bold">
-                TTD
-              </span>
-            </div>
-            <span className="font-cinzel font-semibold text-[#2C1810] text-xs">
-              Smart Pilgrimage
-            </span>
-          </div>
+      <aside className={`hidden lg:flex flex-col bg-white border-r border-[#B8860B]/10 fixed left-0 top-16 bottom-0 z-30 transition-all duration-300 ${
+        isSidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none" : "w-56"
+      }`}>
+        <div className="h-16 flex items-center justify-between px-5 border-b border-[#B8860B]/10">
+          <span className="font-cinzel font-semibold text-[#2C1810] text-xs">
+            Smart Pilgrimage
+          </span>
+          <button
+            onClick={() => setIsSidebarCollapsed(true)}
+            className="p-1.5 rounded-lg hover:bg-[#B8860B]/5 text-[#8B6B47] hover:text-[#B8860B] transition-colors cursor-pointer"
+            title="Collapse Sidebar"
+          >
+            <ChevronLeft size={15} />
+          </button>
         </div>
         <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
           {navItems.map(({ page, label, icon: Icon }) => (
@@ -1635,7 +1679,10 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage }) {
         </nav>
         <div className="p-4 border-t border-[#B8860B]/10">
           <button
-            onClick={() => setPage("landing")}
+            onClick={() => {
+              if (typeof setUserRole === "function") setUserRole(null);
+              setPage("landing");
+            }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-[#8B6B47] hover:text-[#B8860B] transition-colors"
           >
             ← Home
@@ -1644,14 +1691,25 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage }) {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 lg:ml-56">
+      <div className={`flex-1 transition-all duration-300 ${
+        isSidebarCollapsed ? "lg:ml-0" : "lg:ml-56"
+      }`}>
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-[#B8860B]/10 flex items-center justify-between px-6 sticky top-0 z-20">
-          <div>
-            <h1 className="font-cinzel font-bold text-[#2C1810] text-base">
-              {title}
-            </h1>
-            <p className="text-xs text-[#8B6B47]">{subtitle}</p>
+        <header className="h-16 bg-white border-b border-[#B8860B]/10 flex items-center justify-between px-6 sticky top-16 z-20">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 rounded-xl hover:bg-[#B8860B]/5 text-[#8B6B47] hover:text-[#B8860B] transition-all cursor-pointer flex items-center justify-center border border-[#B8860B]/10 bg-white shadow-sm"
+              title={isSidebarCollapsed ? "Show Navigation Sidebar" : "Hide Navigation Sidebar"}
+            >
+              <Menu size={18} />
+            </button>
+            <div>
+              <h1 className="font-cinzel font-bold text-[#2C1810] text-base">
+                {title}
+              </h1>
+              <p className="text-xs text-[#8B6B47]">{subtitle}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button className="relative p-2 rounded-lg hover:bg-[#B8860B]/5 text-[#8B6B47] transition-colors">
@@ -1704,13 +1762,15 @@ function DashCard({ title, value, sub, icon: Icon, trend, trendVal }) {
 }
 
 // ─── Pilgrim Dashboard ────────────────────────────────────────────────────────
-function PilgrimDashboard({ setPage, stats }) {
+function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
   return (
     <DashboardShell
       title="Pilgrim Dashboard"
       subtitle="Plan your sacred journey with AI insights"
       setPage={setPage}
       currentPage="pilgrim"
+      userRole={userRole}
+      setUserRole={setUserRole}
     >
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -1744,135 +1804,78 @@ function PilgrimDashboard({ setPage, stats }) {
         />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5 mb-5">
-        {/* Left column containing charts & visualizers */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Crowd forecast chart */}
-          <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm">
-                  7-Day Crowd Forecast
-                </h3>
-                <p className="text-xs text-[#8B6B47]">
-                  Predicted vs actual pilgrim count this week
-                </p>
-              </div>
-              <span className="text-xs text-[#B8860B] font-medium px-2 py-1 bg-[#B8860B]/8 rounded-full">
-                AI Forecast
-              </span>
+      <div className="space-y-6 mb-6">
+        {/* Crowd forecast chart */}
+
+        {/* Crowd forecast chart */}
+        <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm">
+                7-Day Crowd Forecast
+              </h3>
+              <p className="text-xs text-[#8B6B47]">
+                Predicted vs actual pilgrim count this week
+              </p>
             </div>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={stats?.crowdData?.length > 0 ? stats.crowdData : crowdData}>
-                <defs>
-                  <linearGradient id="pilgrimGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#B8860B" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#B8860B" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5EDD8" />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#8B6B47" }} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: "#8B6B47" }}
-                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
-                />
-                <Tooltip
-                  formatter={(v) => v.toLocaleString()}
-                  contentStyle={{
-                    background: "#fff",
-                    border: "1px solid #B8860B30",
-                    borderRadius: 8,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="pilgrims"
-                  stroke="#B8860B"
-                  fill="url(#pilgrimGrad)"
-                  strokeWidth={2.5}
-                  name="Actual"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="forecast"
-                  stroke="#8B4513"
-                  strokeWidth={2}
-                  strokeDasharray="5 3"
-                  dot={false}
-                  name="Forecast"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <span className="text-xs text-[#B8860B] font-medium px-2 py-1 bg-[#B8860B]/8 rounded-full">
+              AI Forecast
+            </span>
           </div>
-
-          {/* Interactive Wait Simulator Chart */}
-          <InteractiveWaitSimulator />
-
-          {/* Historical Crowd Correlation & Weather Chart */}
-          <CrowdCorrelationChart />
-
-          {/* Service-Specific Wait Analytics */}
-          <ServiceSpecificAnalytics />
-
-          {/* 3D Isometric Queue Visualizer */}
-          <QueueIsometric3D />
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={stats?.crowdData?.length > 0 ? stats.crowdData : crowdData}>
+              <defs>
+                <linearGradient id="pilgrimGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#B8860B" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#B8860B" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F5EDD8" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#8B6B47" }} />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#8B6B47" }}
+                tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
+              />
+              <Tooltip
+                formatter={(v) => v.toLocaleString()}
+                contentStyle={{
+                  background: "#fff",
+                  border: "1px solid #B8860B30",
+                  borderRadius: 8,
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="pilgrims"
+                stroke="#B8860B"
+                fill="url(#pilgrimGrad)"
+                strokeWidth={2.5}
+                name="Actual"
+              />
+              <Line
+                type="monotone"
+                dataKey="forecast"
+                stroke="#8B4513"
+                strokeWidth={2}
+                strokeDasharray="5 3"
+                dot={false}
+                name="Forecast"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Right column containing passes & assistant */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Pilgrim Ticket & Action Center */}
-          <PilgrimActionCenter />
+        {/* Pilgrim Intelligence Center */}
+        <PilgrimIntelligenceCenter userRole={userRole} />
 
-          {/* AI Temple Visit Advisory Card */}
-          <div className="bg-white/40 backdrop-blur border border-[#B8860B]/10 rounded-3xl p-5 shadow-sm flex justify-center">
-            <TempleAdvisoryCard />
-          </div>
+        {/* Interactive Wait Simulator Chart */}
+        <InteractiveWaitSimulator />
 
-          {/* AI Assistant */}
-          <div className="bg-gradient-to-b from-[#2C1810] to-[#1A0A00] rounded-2xl p-6 text-white">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-full bg-[#B8860B]/20 border border-[#D4A843]/30 flex items-center justify-center">
-                <Brain size={14} className="text-[#D4A843]" />
-              </div>
-              <span className="font-cinzel font-semibold text-sm">
-                AI Travel Assistant
-              </span>
-            </div>
-            <div className="space-y-3 mb-4">
-              <div className="bg-white/10 rounded-xl p-3 text-xs text-white/85 leading-relaxed">
-                Best time for darshan this week is{" "}
-                <span className="text-[#D4A843] font-semibold">
-                  Tuesday 4–6 AM
-                </span>
-                . Crowd forecast shows only 8,200 pilgrims — shortest queues of
-                the week.
-              </div>
-              <div className="bg-white/10 rounded-xl p-3 text-xs text-white/85 leading-relaxed">
-                <span className="text-[#D4A843] font-semibold">
-                  Weather alert:
-                </span>{" "}
-                Light showers expected Thursday. Carry an umbrella for the climb.
-              </div>
-              <div className="bg-white/10 rounded-xl p-3 text-xs text-white/85 leading-relaxed">
-                Recommended seva:{" "}
-                <span className="text-[#D4A843] font-semibold">Suprabhatam</span>{" "}
-                — high spiritual significance, available slots on Wednesday.
-              </div>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Ask anything about your visit..."
-                className="w-full px-3 py-2.5 pr-10 rounded-xl bg-white/10 border border-white/15 text-white placeholder:text-white/35 text-xs focus:outline-none focus:border-[#D4A843]/50"
-              />
+        {/* Service-Specific Wait Analytics */}
+        <ServiceSpecificAnalytics />
 
-              <ChevronRight
-                size={14}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#D4A843]"
-              />
-            </div>
-          </div>
-        </div>
+        {/* 3D Isometric Queue Visualizer */}
+        <QueueIsometric3D />
       </div>
 
       {/* Weather + recommendations */}
@@ -1993,14 +1996,42 @@ function PilgrimDashboard({ setPage, stats }) {
   );
 }
 
+// ─── Booking Center Dashboard ──────────────────────────────────────────────────
+function BookingCenterDashboard({ setPage, stats, userRole, setUserRole }) {
+  return (
+    <DashboardShell
+      title="Sacred Booking Terminal"
+      subtitle="Reserve airport/railway transfers, hilltop ghat transit options, free luggage handling, and sacred temple entry tickets"
+      setPage={setPage}
+      currentPage="booking_center"
+      userRole={userRole}
+      setUserRole={setUserRole}
+    >
+      <div className="space-y-6 mb-6">
+        {/* Pilgrim Ticket & Action Center */}
+        <div className="w-full">
+          <PilgrimActionCenter />
+        </div>
+
+        {/* Sacred Transit Booking Center */}
+        <div className="w-full">
+          <PilgrimBookingCenter userRole={userRole} />
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}
+
 // ─── Hotel Dashboard ──────────────────────────────────────────────────────────
-function HotelDashboard({ setPage, stats }) {
+function HotelDashboard({ setPage, stats, userRole, setUserRole }) {
   return (
     <DashboardShell
       title="Hotel Partner Dashboard"
       subtitle="Occupancy forecasts & demand insights for Balaji Grand Hotel"
       setPage={setPage}
       currentPage="hotel"
+      userRole={userRole}
+      setUserRole={setUserRole}
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <DashCard
@@ -2228,13 +2259,15 @@ function HotelDashboard({ setPage, stats }) {
 }
 
 // ─── Travel Agency Dashboard ──────────────────────────────────────────────────
-function TravelDashboard({ setPage, stats }) {
+function TravelDashboard({ setPage, stats, userRole, setUserRole }) {
   return (
     <DashboardShell
       title="Travel Agency Dashboard"
       subtitle="Demand forecasts & vehicle planning for Balaji Tours & Travels"
       setPage={setPage}
       currentPage="travel"
+      userRole={userRole}
+      setUserRole={setUserRole}
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <DashCard
@@ -2461,13 +2494,15 @@ function TravelDashboard({ setPage, stats }) {
 }
 
 // ─── Temple Management Dashboard ─────────────────────────────────────────────
-function TempleDashboard({ setPage, stats }) {
+function TempleDashboard({ setPage, stats, userRole, setUserRole }) {
   return (
     <DashboardShell
       title="Temple Management Dashboard"
       subtitle="AI Command Center — Tirumala Tirupati Devasthanams"
       setPage={setPage}
       currentPage="temple"
+      userRole={userRole}
+      setUserRole={setUserRole}
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <DashCard
@@ -2822,6 +2857,194 @@ function TempleDashboard({ setPage, stats }) {
   );
 }
 
+// ─── Government Dashboard ─────────────────────────────────────────────────────
+function GovernmentDashboard({ setPage, stats, userRole, setUserRole }) {
+  const nextWeekForecast = [
+    { day: "Monday", count: 48500, status: "Normal", capacity: "Safe", weather: "Sunny (24°C)", waitTime: "2h 10m" },
+    { day: "Tuesday", count: 38200, status: "Optimal", capacity: "Safe", weather: "Clear (26°C)", waitTime: "1h 30m" },
+    { day: "Wednesday", count: 42100, status: "Normal", capacity: "Safe", weather: "Partly Cloudy", waitTime: "1h 50m" },
+    { day: "Thursday", count: 54600, status: "Elevated", capacity: "Borderline", weather: "Rainy (21°C)", waitTime: "3h 15m" },
+    { day: "Friday", count: 62400, status: "Busy", capacity: "Borderline", weather: "Partly Cloudy", waitTime: "4h 00m" },
+    { day: "Saturday", count: 78500, status: "Peak Influx", capacity: "Over Capacity", weather: "Sunny (25°C)", waitTime: "5h 30m" },
+    { day: "Sunday", count: 68500, status: "Busy", capacity: "Over Capacity", weather: "Windy (22°C)", waitTime: "4h 45m" },
+  ];
+
+  return (
+    <DashboardShell
+      title="Government Analytics Dashboard"
+      subtitle="Administrative oversight & macro planning models for Andhra Pradesh State Authorities"
+      setPage={setPage}
+      currentPage="government"
+      userRole={userRole}
+      setUserRole={setUserRole}
+    >
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <DashCard
+          title="Predicted Influx (Next Week)"
+          value="3.92L"
+          sub="Devotees cumulative forecast"
+          icon={Users}
+          trend="up"
+          trendVal="+8.2%"
+        />
+        <DashCard
+          title="System Alert Status"
+          value="Yellow Alert"
+          sub="Peak surge expected Sat"
+          icon={AlertTriangle}
+        />
+        <DashCard
+          title="Model Confidence"
+          value="92.4%"
+          sub="Refined with weather datasets"
+          icon={Brain}
+        />
+        <DashCard
+          title="Peak Active Wait"
+          value="5h 30m"
+          sub="Projected Saturday afternoon"
+          icon={Clock}
+        />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-5 mb-5">
+        {/* Weekly Influx Chart */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-[#B8860B]/10 flex flex-col justify-between">
+          <div className="mb-4">
+            <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm">
+              AI Devotee Weekly Predictor
+            </h3>
+            <p className="text-xs text-[#8B6B47]">
+              Predicted pilgrim arrival rates for next week (Monday to Sunday)
+            </p>
+          </div>
+          <div className="h-[220px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={nextWeekForecast} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="govDevoteeGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#B8860B" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#B8860B" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5EDD8" />
+                <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#8B6B47" }} />
+                <YAxis
+                  tick={{ fontSize: 9, fill: "#8B6B47" }}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
+                />
+                <Tooltip
+                  formatter={(v) => v.toLocaleString()}
+                  contentStyle={{
+                    background: "#fff",
+                    border: "1px solid #B8860B30",
+                    borderRadius: 8,
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#B8860B"
+                  fill="url(#govDevoteeGrad)"
+                  strokeWidth={2.5}
+                  name="Predicted Devotees"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* AI Actionable Directives */}
+        <div className="lg:col-span-1 bg-gradient-to-b from-[#2C1810] to-[#1A0A00] rounded-2xl p-6 text-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Brain size={16} className="text-[#D4A843]" />
+              <span className="font-cinzel font-semibold text-sm">
+                AI Logistics Directives
+              </span>
+            </div>
+            <div className="space-y-3.5 text-xs text-white/85 leading-relaxed">
+              <div className="p-3 bg-white/10 rounded-xl border border-white/10">
+                <span className="text-[#D4A843] font-bold block mb-1">⚠️ Saturday Peak Mitigation</span>
+                Saturday expected count (<strong className="text-white">78.5K</strong>) exceeds safe capacity limits. State bus transit lines are advised to deploy 12 emergency backup coaches.
+              </div>
+              <div className="p-3 bg-white/10 rounded-xl border border-white/10">
+                <span className="text-[#D4A843] font-bold block mb-1">🌧️ Thursday Weather Operations</span>
+                Precipitation forecasts indicate a <strong className="text-white">72% probability</strong> of showers. Ensure holding zones are prepared and keep emergency medical stations operational.
+              </div>
+            </div>
+          </div>
+          <div className="text-[10px] text-white/50 border-t border-white/10 pt-3 mt-4">
+            Directives are synced with local state administration models.
+          </div>
+        </div>
+      </div>
+
+      {/* Devotees Prediction Details Table */}
+      <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10 mb-5">
+        <div className="mb-4">
+          <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm">
+            Predicted Weekly Devotee Details
+          </h3>
+          <p className="text-xs text-[#8B6B47]">
+            Comprehensive logistic indicators mapped daily for district administration planning
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#B8860B]/15 text-[#8B6B47] font-semibold">
+                <th className="py-2.5 px-3">Day</th>
+                <th className="py-2.5 px-3 text-right">Predicted Devotees</th>
+                <th className="py-2.5 px-3">Surge Level</th>
+                <th className="py-2.5 px-3">Safety Capacity</th>
+                <th className="py-2.5 px-3">Weather Factor</th>
+                <th className="py-2.5 px-3">Projected Max Wait</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nextWeekForecast.map((row) => (
+                <tr key={row.day} className="border-b border-[#B8860B]/5 hover:bg-[#FFF8E7]/40 text-[#2C1810]">
+                  <td className="py-3 px-3 font-medium">{row.day}</td>
+                  <td className="py-3 px-3 text-right font-mono font-semibold">{row.count.toLocaleString()}</td>
+                  <td className="py-3 px-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      row.status === "Peak Influx" ? "bg-red-50 text-red-600 border border-red-100" :
+                      row.status === "Busy" ? "bg-orange-50 text-orange-600 border border-orange-100" :
+                      row.status === "Normal" ? "bg-blue-50 text-blue-600 border border-blue-100" :
+                      "bg-green-50 text-green-700 border border-green-100"
+                    }`}>
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="py-3 px-3">
+                    <span className={`font-semibold ${
+                      row.capacity === "Over Capacity" ? "text-red-600" :
+                      row.capacity === "Borderline" ? "text-orange-500" :
+                      "text-green-600"
+                    }`}>
+                      {row.capacity}
+                    </span>
+                  </td>
+                  <td className="py-3 px-3 text-[#8B6B47]">{row.weather}</td>
+                  <td className="py-3 px-3 font-mono font-semibold text-[#8B4513]">{row.waitTime}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Analytics Command & Radar Controls */}
+      <div className="grid lg:grid-cols-2 gap-5">
+        <CrowdCorrelationChart />
+        <TempleResourceRadar />
+      </div>
+    </DashboardShell>
+  );
+}
+
 // ─── Pilgrim Ticket & Action Center Component ─────────────────────────────────
 function PilgrimActionCenter() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -3035,6 +3258,30 @@ function PilgrimActionCenter() {
 export default function App() {
   const [page, setPage] = useState("landing");
   const prevPage = useRef("landing");
+  const [userRole, setUserRole] = useState(null);
+
+  // Enforce page constraints based on authenticated userRole
+  const isPageAllowed = (p, role) => {
+    if (p === "landing" || p === "login" || p === "register") return true;
+    if (!role) return false;
+    if (p === "pilgrim") return true;
+    if (p === "booking_center") return true;
+    if (p === "government") return role === "government";
+    if (p === "temple") return role === "temple";
+    if (p === "hotel") return role === "hotel" || role === "temple";
+    if (p === "travel") return role === "travel" || role === "temple";
+    return false;
+  };
+
+  useEffect(() => {
+    if (!isPageAllowed(page, userRole)) {
+      if (userRole) {
+        setPage(userRole);
+      } else {
+        setPage("login");
+      }
+    }
+  }, [page, userRole]);
 
   const [stats, setStats] = useState({
     crowdData: [],
@@ -3072,15 +3319,24 @@ export default function App() {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-15px) rotate(0.5deg); }
         }
+        @keyframes dash {
+          to { stroke-dashoffset: -40; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
       {showNav && <Navbar currentPage={page} setPage={setPageWithScroll} />}
       {page === "landing" && <LandingPage setPage={setPageWithScroll} />}
-      {page === "login" && <LoginPage setPage={setPageWithScroll} />}
-      {page === "register" && <RegisterPage setPage={setPageWithScroll} />}
-      {page === "pilgrim" && <PilgrimDashboard setPage={setPageWithScroll} stats={stats} />}
-      {page === "hotel" && <HotelDashboard setPage={setPageWithScroll} stats={stats} />}
-      {page === "travel" && <TravelDashboard setPage={setPageWithScroll} stats={stats} />}
-      {page === "temple" && <TempleDashboard setPage={setPageWithScroll} stats={stats} />}
+      {page === "login" && <LoginPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
+      {page === "register" && <RegisterPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
+      {page === "pilgrim" && <PilgrimDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "booking_center" && <BookingCenterDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "hotel" && <HotelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "travel" && <TravelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "temple" && <TempleDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "government" && <GovernmentDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
     </div>
   );
 }
