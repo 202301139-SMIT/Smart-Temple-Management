@@ -2887,7 +2887,7 @@ function PilgrimActionCenter() {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-[#B8860B]/15 shadow-sm h-full flex flex-col justify-between">
+    <div className="bg-white rounded-2xl p-5 border border-[#B8860B]/15 shadow-sm flex flex-col gap-4">
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Users size={16} className="text-[#B8860B]" />

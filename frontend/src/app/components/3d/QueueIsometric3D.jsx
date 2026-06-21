@@ -47,7 +47,7 @@ export default function QueueIsometric3D() {
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#B8860B]/10 flex flex-col justify-between h-full gap-6">
+    <div className="bg-white rounded-3xl p-6 border border-[#B8860B]/10 flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

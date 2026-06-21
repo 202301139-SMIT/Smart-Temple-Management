@@ -39,7 +39,7 @@ export default function CrowdCorrelationChart() {
   }, []);
 
   return (
-    <div className="bg-white rounded-3xl p-6 border border-[#B8860B]/10 flex flex-col justify-between h-full gap-6">
+    <div className="bg-white rounded-3xl p-6 border border-[#B8860B]/10 flex flex-col gap-6">
       {/* Chart Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
