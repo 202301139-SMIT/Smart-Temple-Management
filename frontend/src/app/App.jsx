@@ -50,6 +50,9 @@ import {
   Leaf,
   Compass,
   Ticket,
+  ShoppingBag,
+  Utensils,
+  Trash2,
 } from "lucide-react";
 
 // ─── 3D and Interactive Dashboard Component Imports ──────────────────────
@@ -63,6 +66,7 @@ import ServiceSpecificAnalytics from "./components/dashboard/ServiceSpecificAnal
 import PilgrimIntelligenceCenter, { PilgrimBookingCenter, PilgrimNews, FutureScopeRoadmap } from "./components/dashboard/PilgrimIntelligenceCenter";
 import TravelAssistant from "./components/dashboard/TravelAssistant";
 import SacredPlaces from "./components/dashboard/SacredPlaces";
+import TempleOperations from "./components/dashboard/TempleOperations";
 
 
 // ─── Chart Data ──────────────────────────────────────────────────────────────
@@ -173,7 +177,7 @@ function StatBadge({ value, label, trend }) {
 }
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
-function Navbar({ currentPage, setPage }) {
+function Navbar({ currentPage, setPage, userRole, setUserRole }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -183,9 +187,24 @@ function Navbar({ currentPage, setPage }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const isDashboard = ["pilgrim", "hotel", "travel", "temple", "booking_center", "travel_assistant", "sacred_places"].includes(
+  const isDashboard = ["pilgrim", "hotel", "travel", "temple", "booking_center", "travel_assistant", "sacred_places", "government"].includes(
     currentPage,
   );
+
+  const isPageAllowed = (p, role) => {
+    if (p === "landing" || p === "login" || p === "register") return true;
+    if (!role) return false;
+    if (role === "pilgrim") {
+      return ["pilgrim", "booking_center", "travel_assistant", "sacred_places"].includes(p);
+    }
+    if (role === "government") return p === "government";
+    if (role === "temple") {
+      return ["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(p);
+    }
+    if (role === "hotel") return p === "hotel";
+    if (role === "travel") return p === "travel";
+    return false;
+  };
 
   return (
     <nav
@@ -216,29 +235,6 @@ function Navbar({ currentPage, setPage }) {
         <div className="hidden md:flex items-center gap-6">
           {isDashboard ? (
             <>
-              {["pilgrim", "booking_center", "travel_assistant", "sacred_places", "hotel", "travel", "temple"].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`text-xs tracking-wider uppercase font-medium transition-colors ${
-                    currentPage === p
-                      ? "text-[#B8860B]"
-                      : "text-[#8B6B47] hover:text-[#B8860B]"
-                  }`}
-                >
-                  {p === "temple"
-                    ? "Temple Mgmt"
-                    : p === "travel"
-                      ? "Travel Agency"
-                      : p === "booking_center"
-                        ? "Ticket & Services"
-                        : p === "travel_assistant"
-                          ? "Travel Assistant"
-                          : p === "sacred_places"
-                            ? "Sacred Place's"
-                            : p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              ))}
               <button
                 onClick={() => setPage("landing")}
                 className="text-xs tracking-wider uppercase font-medium text-[#8B6B47] hover:text-[#B8860B] transition-colors"
@@ -263,18 +259,46 @@ function Navbar({ currentPage, setPage }) {
               >
                 About
               </button>
-              <button
-                onClick={() => setPage("login")}
-                className="flex items-center gap-1.5 text-sm font-medium text-[#B8860B] hover:text-[#8B4513] transition-colors"
-              >
-                <LogIn size={14} /> Login
-              </button>
-              <button
-                onClick={() => setPage("register")}
-                className="px-4 py-2 rounded-full bg-[#B8860B] text-white text-sm font-medium hover:bg-[#8B4513] transition-colors shadow-sm"
-              >
-                Register
-              </button>
+              {userRole ? (
+                <>
+                  <button
+                    onClick={() => {
+                      if (userRole === "pilgrim") setPage("pilgrim");
+                      else if (userRole === "government") setPage("government");
+                      else if (userRole === "temple") setPage("temple_overview");
+                      else if (userRole === "hotel") setPage("hotel");
+                      else if (userRole === "travel") setPage("travel");
+                    }}
+                    className="text-xs tracking-wider uppercase font-medium text-[#8B6B47] hover:text-[#B8860B] transition-colors"
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (typeof setUserRole === "function") setUserRole(null);
+                      setPage("landing");
+                    }}
+                    className="px-4 py-2 rounded-full bg-white/10 backdrop-blur border border-[#B8860B]/30 text-[#B8860B] text-xs font-semibold hover:bg-[#B8860B]/5 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setPage("login")}
+                    className="flex items-center gap-1.5 text-sm font-medium text-[#B8860B] hover:text-[#8B4513] transition-colors"
+                  >
+                    <LogIn size={14} /> Login
+                  </button>
+                  <button
+                    onClick={() => setPage("register")}
+                    className="px-4 py-2 rounded-full bg-[#B8860B] text-white text-sm font-medium hover:bg-[#8B4513] transition-colors shadow-sm"
+                  >
+                    Register
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -293,78 +317,117 @@ function Navbar({ currentPage, setPage }) {
 
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-[#B8860B]/15 px-6 py-4 flex flex-col gap-3">
-          <button
-            onClick={() => {
-              setPage("login");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] font-medium text-left"
-          >
-            Login
-          </button>
-          <button
-            onClick={() => {
-              setPage("register");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#B8860B] font-semibold text-left"
-          >
-            Register
-          </button>
-          <button
-            onClick={() => {
-              setPage("pilgrim");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] text-left"
-          >
-            Pilgrim Dashboard
-          </button>
-          <button
-            onClick={() => {
-              setPage("travel_assistant");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] text-left"
-          >
-            Travel Assistant
-          </button>
-          <button
-            onClick={() => {
-              setPage("sacred_places");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] text-left"
-          >
-            Sacred Place's
-          </button>
-          <button
-            onClick={() => {
-              setPage("hotel");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] text-left"
-          >
-            Hotel Dashboard
-          </button>
-          <button
-            onClick={() => {
-              setPage("travel");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] text-left"
-          >
-            Travel Dashboard
-          </button>
-          <button
-            onClick={() => {
-              setPage("temple");
-              setMenuOpen(false);
-            }}
-            className="text-sm text-[#5C3A1E] text-left"
-          >
-            Temple Dashboard
-          </button>
+          {!userRole && (
+            <>
+              <button
+                onClick={() => {
+                  setPage("login");
+                  setMenuOpen(false);
+                }}
+                className="text-sm text-[#5C3A1E] font-medium text-left"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => {
+                  setPage("register");
+                  setMenuOpen(false);
+                }}
+                className="text-sm text-[#B8860B] font-semibold text-left"
+              >
+                Register
+              </button>
+            </>
+          )}
+          {userRole && isPageAllowed("pilgrim", userRole) && (
+            <button
+              onClick={() => {
+                setPage("pilgrim");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Pilgrim Dashboard
+            </button>
+          )}
+          {userRole && isPageAllowed("travel_assistant", userRole) && (
+            <button
+              onClick={() => {
+                setPage("travel_assistant");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Travel Assistant
+            </button>
+          )}
+          {userRole && isPageAllowed("sacred_places", userRole) && (
+            <button
+              onClick={() => {
+                setPage("sacred_places");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Sacred Place's
+            </button>
+          )}
+          {userRole && isPageAllowed("hotel", userRole) && (
+            <button
+              onClick={() => {
+                setPage("hotel");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Hotel Dashboard
+            </button>
+          )}
+          {userRole && isPageAllowed("travel", userRole) && (
+            <button
+              onClick={() => {
+                setPage("travel");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Travel Dashboard
+            </button>
+          )}
+          {userRole && isPageAllowed("temple_overview", userRole) && (
+            <button
+              onClick={() => {
+                setPage("temple_overview");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Temple Dashboard
+            </button>
+          )}
+          {userRole && isPageAllowed("government", userRole) && (
+            <button
+              onClick={() => {
+                setPage("government");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#5C3A1E] text-left"
+            >
+              Government Analytics
+            </button>
+          )}
+          {userRole && (
+            <button
+              onClick={() => {
+                if (typeof setUserRole === "function") setUserRole(null);
+                setPage("landing");
+                setMenuOpen(false);
+              }}
+              className="text-sm text-[#B8860B] font-semibold text-left pt-2 border-t border-[#B8860B]/10"
+            >
+              Logout
+            </button>
+          )}
         </div>
       )}
     </nav>
@@ -1152,7 +1215,7 @@ function Footer({ setPage }) {
                 Travel Agency
               </button>
               <button
-                onClick={() => setPage("temple")}
+                onClick={() => setPage("temple_overview")}
                 className="block hover:text-[#D4A843] transition-colors"
               >
                 Temple Admin
@@ -1346,7 +1409,7 @@ function LoginPage({ setPage, setUserRole }) {
                   role = "travel";
                 }
                 setUserRole(role);
-                setPage(role);
+                setPage(role === "temple" ? "temple_overview" : role);
               }}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2"
             >
@@ -1370,11 +1433,12 @@ function LoginPage({ setPage, setUserRole }) {
                         "Government": "government",
                         "Hotel": "hotel",
                         "Travel Agency": "travel",
-                        "Temple Admin": "temple"
+                        "Temple Admin": "temple_overview"
                       };
-                      const targetRole = pageMap[role];
+                      const targetPage = pageMap[role];
+                      const targetRole = targetPage === "temple_overview" ? "temple" : targetPage;
                       setUserRole(targetRole);
-                      setPage(targetRole);
+                      setPage(targetPage);
                     }}
                     className="py-2 px-2 rounded-xl border border-[#B8860B]/20 text-[#5C3A1E] text-[10px] font-medium hover:border-[#B8860B]/50 hover:bg-[#B8860B]/5 transition-colors text-center truncate"
                   >
@@ -1655,19 +1719,24 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
     { page: "sacred_places", label: "Sacred Place's", icon: MapPin },
     { page: "hotel", label: "Hotel Partner", icon: Hotel },
     { page: "travel", label: "Travel Agency", icon: Truck },
-    { page: "temple", label: "Temple Mgmt", icon: Shield },
+    { page: "temple_overview", label: "Operations Command", icon: Cpu },
+    { page: "temple_laddu", label: "Laddu Operations", icon: ShoppingBag },
+    { page: "temple_annadanam", label: "Annaprasadam Food", icon: Utensils },
+    { page: "temple_security", label: "Security Command", icon: Shield },
+    { page: "temple_facility", label: "Facility & Cleaning", icon: Trash2 },
   ];
 
   const navItems = allNavItems.filter(({ page }) => {
-    if (page === "pilgrim") return true;
-    if (page === "booking_center") return true;
-    if (page === "travel_assistant") return true;
-    if (page === "sacred_places") return true;
     if (!userRole) return false;
-    if (page === "government") return userRole === "government";
-    if (page === "temple") return userRole === "temple";
-    if (page === "hotel") return userRole === "hotel" || userRole === "temple";
-    if (page === "travel") return userRole === "travel" || userRole === "temple";
+    if (userRole === "pilgrim") {
+      return ["pilgrim", "booking_center", "travel_assistant", "sacred_places"].includes(page);
+    }
+    if (userRole === "government") return page === "government";
+    if (userRole === "temple") {
+      return ["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(page);
+    }
+    if (userRole === "hotel") return page === "hotel";
+    if (userRole === "travel") return page === "travel";
     return false;
   });
 
@@ -2555,365 +2624,48 @@ function TravelDashboard({ setPage, stats, userRole, setUserRole }) {
 }
 
 // ─── Temple Management Dashboard ─────────────────────────────────────────────
-function TempleDashboard({ setPage, stats, userRole, setUserRole }) {
+function TempleDashboard({
+  setPage,
+  stats,
+  userRole,
+  setUserRole,
+  activeTab,
+  forecastDevoteeCount,
+  setForecastDevoteeCount,
+  stocks,
+  setStocks,
+}) {
+  const titles = {
+    temple_overview: "Operations Command Center",
+    temple_laddu: "Laddu Operations Center",
+    temple_annadanam: "Annadanam Operations Center",
+    temple_security: "Security Command Center",
+    temple_facility: "Cleaning & Facility Management",
+  };
+  const subtitles = {
+    temple_overview: "AI Command Center — Tirumala Tirupati Devasthanams",
+    temple_laddu: "Production, Sales & Inventory Automation Engine",
+    temple_annadanam: "Mass Dining & Kitchen Timeline Control Platform",
+    temple_security: "Personnel Allocation & AI Crowd Density Patrol Map",
+    temple_facility: "Sanitation Staffing, Utilities & Waste Logistics",
+  };
+
   return (
     <DashboardShell
-      title="Temple Management Dashboard"
-      subtitle="AI Command Center — Tirumala Tirupati Devasthanams"
+      title={titles[activeTab] || "Temple Operations"}
+      subtitle={subtitles[activeTab] || "AI Command Center"}
       setPage={setPage}
-      currentPage="temple"
+      currentPage={activeTab}
       userRole={userRole}
       setUserRole={setUserRole}
     >
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <DashCard
-          title="Predicted This Week"
-          value="1.94L"
-          sub="Pilgrims forecast (±3%)"
-          icon={Users}
-          trend="up"
-          trendVal="+15%"
-        />
-        <DashCard
-          title="Crowd Status"
-          value="Moderate"
-          sub="Below peak capacity now"
-          icon={Activity}
-        />
-        <DashCard
-          title="Water Forecast"
-          value="18.4 MLD"
-          sub="Weekend requirement"
-          icon={Droplets}
-          trend="up"
-          trendVal="+8%"
-        />
-        <DashCard
-          title="Security Posts"
-          value="124/140"
-          sub="16 additional Saturday"
-          icon={Shield}
-        />
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-5 mb-5">
-        {/* Left column: Pilgrim Count chart */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10 h-full flex flex-col justify-between">
-            <div className="mb-4">
-              <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm">
-                Pilgrim Count — June 2025
-              </h3>
-              <p className="text-xs text-[#8B6B47]">
-                Weekly actual vs predicted vs safe capacity
-              </p>
-            </div>
-            <div className="h-[230px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats?.templeWeeklyData?.length > 0 ? stats.templeWeeklyData : templeWeeklyData}>
-                  <defs>
-                    <linearGradient id="templeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#B8860B" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#B8860B" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F5EDD8" />
-                  <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#8B6B47" }} />
-                  <YAxis
-                    tick={{ fontSize: 9, fill: "#8B6B47" }}
-                    tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
-                  />
-                  <Tooltip
-                    formatter={(v) => v.toLocaleString()}
-                    contentStyle={{
-                      background: "#fff",
-                      border: "1px solid #B8860B30",
-                      borderRadius: 8,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="actual"
-                    stroke="#B8860B"
-                    fill="url(#templeGrad)"
-                    strokeWidth={2}
-                    name="Actual"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="predicted"
-                    stroke="#D4A843"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    dot={false}
-                    name="Predicted"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="capacity"
-                    stroke="#dc2626"
-                    strokeWidth={1.5}
-                    strokeDasharray="6 3"
-                    dot={false}
-                    name="Capacity Limit"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Right column containing alerts */}
-        <div className="lg:col-span-1">
-          {/* AI Command Center */}
-          <div className="bg-gradient-to-b from-[#1A0A00] to-[#2C1810] rounded-2xl p-6 h-full flex flex-col justify-between">
-            <div className="flex items-center gap-2 mb-5">
-              <Cpu size={15} className="text-[#D4A843]" />
-              <span className="font-cinzel font-semibold text-white text-sm">
-                AI Command Center
-              </span>
-              <span className="ml-auto flex items-center gap-1 text-[10px] text-green-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                Live
-              </span>
-            </div>
-            <div className="space-y-2.5 flex-1 flex flex-col justify-center">
-              {[
-                {
-                  level: "Critical",
-                  color: "text-red-400 bg-red-500/15",
-                  title: "W4 Jun Capacity Alert",
-                  body: "Predicted 1,94,000 pilgrims — 21% over safe capacity. Activate overflow management by June 22.",
-                },
-                {
-                  level: "High",
-                  color: "text-orange-400 bg-orange-500/15",
-                  title: "Water Shortage Risk",
-                  body: "Weekend demand 18.4 MLD vs stored 15.2 MLD. Request emergency water supply from APSPDCL.",
-                },
-                {
-                  level: "Medium",
-                  color: "text-yellow-400 bg-yellow-500/15",
-                  title: "Prasad Stock Low",
-                  body: "Laddoo stock sufficient for 3 days at current rate. Place reorder by Friday for 1.2L units.",
-                },
-              ].map(({ level, color, title, body }) => (
-                <div
-                  key={title}
-                  className="rounded-xl bg-white/8 p-3 border border-white/8"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${color}`}
-                    >
-                      {level}
-                    </span>
-                  </div>
-                  <div className="text-xs font-semibold text-white mb-1">
-                    {title}
-                  </div>
-                  <p className="text-xs text-white/60 leading-relaxed">{body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 2: Radar & Correlation Charts */}
-      <div className="grid lg:grid-cols-2 gap-5 mb-5">
-        <TempleResourceRadar />
-        <CrowdCorrelationChart />
-      </div>
-
-      {/* Row 3: Service Analytics & Queue Map */}
-      <div className="grid lg:grid-cols-2 gap-5 mb-5">
-        <ServiceSpecificAnalytics />
-        <QueueIsometric3D />
-      </div>
-
-      <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-5">
-        {/* Resource Planning */}
-        <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
-          <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm mb-4">
-            Resource Planning
-          </h3>
-          <div className="space-y-4">
-            {[
-              {
-                label: "Security Personnel",
-                current: 124,
-                needed: 140,
-                unit: "officers",
-              },
-              {
-                label: "Medical Staff",
-                current: 42,
-                needed: 50,
-                unit: "staff",
-              },
-              {
-                label: "Sanitation Workers",
-                current: 180,
-                needed: 220,
-                unit: "workers",
-              },
-              {
-                label: "Queue Managers",
-                current: 64,
-                needed: 80,
-                unit: "managers",
-              },
-            ].map(({ label, current, needed, unit }) => {
-              const pct = Math.round((current / needed) * 100);
-              return (
-                <div key={label}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-[#2C1810] font-medium">
-                      {label}
-                    </span>
-                    <span className="text-xs text-[#8B6B47]">
-                      {current}/{needed} {unit}
-                    </span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-[#F5EDD8] overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${pct < 80 ? "bg-red-400" : pct < 90 ? "bg-orange-400" : "bg-gradient-to-r from-[#B8860B] to-[#D4A843]"}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Accommodation Insights */}
-        <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
-          <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm mb-4">
-            Accommodation Insights
-          </h3>
-          <div className="space-y-3">
-            {[
-              { name: "TTD Cottages", total: 1200, occupied: 1080, pct: 90 },
-              {
-                name: "Srivari Rest Houses",
-                total: 800,
-                occupied: 768,
-                pct: 96,
-              },
-              {
-                name: "Padmavathi Guest House",
-                total: 400,
-                occupied: 320,
-                pct: 80,
-              },
-              {
-                name: "Private Hotels (400+)",
-                total: 8000,
-                occupied: 6960,
-                pct: 87,
-              },
-            ].map(({ name, total, occupied, pct }) => (
-              <div key={name}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-[#2C1810] font-medium">
-                    {name}
-                  </span>
-                  <span className="text-xs text-[#8B6B47]">{pct}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-[#F5EDD8] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#B8860B] to-[#D4A843]"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <div className="text-xs text-[#8B6B47] mt-0.5">
-                  {occupied.toLocaleString()} / {total.toLocaleString()} rooms
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Water & Crowd Trends */}
-        <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
-          <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm mb-4">
-            Operational Status
-          </h3>
-          <div className="space-y-3">
-            {[
-              {
-                icon: Droplets,
-                label: "Water Storage",
-                value: "15.2 MLD",
-                status: "At Risk",
-                color: "text-orange-600 bg-orange-50",
-              },
-              {
-                icon: Leaf,
-                label: "Prasad Stock",
-                value: "3.2L units",
-                status: "Reorder Soon",
-                color: "text-yellow-600 bg-yellow-50",
-              },
-              {
-                icon: Shield,
-                label: "Security Readiness",
-                value: "89%",
-                status: "Good",
-                color: "text-green-600 bg-green-50",
-              },
-              {
-                icon: Activity,
-                label: "Queue Wait Time",
-                value: "3h 20m",
-                status: "Elevated",
-                color: "text-red-600 bg-red-50",
-              },
-              {
-                icon: MapPin,
-                label: "Crowd Density",
-                value: "Moderate",
-                status: "Stable",
-                color: "text-green-600 bg-green-50",
-              },
-              {
-                icon: Users,
-                label: "Darshan Rate",
-                value: "14,200/hr",
-                status: "Normal",
-                color: "text-green-600 bg-green-50",
-              },
-            ].map(({ icon: Icon, label, value, status, color }) => (
-              <div
-                key={label}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-[#FFF8E7]"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon size={13} className="text-[#B8860B]" />
-                  <div>
-                    <div className="text-xs font-semibold text-[#2C1810]">
-                      {value}
-                    </div>
-                    <div className="text-[10px] text-[#8B6B47]">{label}</div>
-                  </div>
-                </div>
-                <span
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${color}`}
-                >
-                  {status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Pilgrim Ticket & Action Center */}
-        <div className="lg:col-span-1">
-          <PilgrimActionCenter />
-        </div>
-      </div>
+      <TempleOperations
+        activeTab={activeTab}
+        forecastDevoteeCount={forecastDevoteeCount}
+        setForecastDevoteeCount={setForecastDevoteeCount}
+        stocks={stocks}
+        setStocks={setStocks}
+      />
     </DashboardShell>
   );
 }
@@ -3321,25 +3073,57 @@ export default function App() {
   const prevPage = useRef("landing");
   const [userRole, setUserRole] = useState(null);
 
+  const [forecastDevoteeCount, setForecastDevoteeCount] = useState(70000);
+  const [stocks, setStocks] = useState({
+    besan: 45.0,
+    sugar: 62.0,
+    ghee: 12500,
+    cashews: 8200,
+    rice: 60.0,
+    vegetables: 14.5,
+    oil: 9200,
+    dal: 11500,
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStocks((prev) => {
+        const rate = forecastDevoteeCount / 50000;
+        return {
+          besan: Math.max(0, +(prev.besan - 0.08 * rate).toFixed(2)),
+          sugar: Math.max(0, +(prev.sugar - 0.1 * rate).toFixed(2)),
+          ghee: Math.max(0, Math.round(prev.ghee - 22 * rate)),
+          cashews: Math.max(0, Math.round(prev.cashews - 15 * rate)),
+          rice: Math.max(0, +(prev.rice - 0.12 * rate).toFixed(2)),
+          vegetables: Math.max(0, +(prev.vegetables - 0.08 * rate).toFixed(2)),
+          oil: Math.max(0, Math.round(prev.oil - 18 * rate)),
+          dal: Math.max(0, Math.round(prev.dal - 20 * rate)),
+        };
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [forecastDevoteeCount]);
+
   // Enforce page constraints based on authenticated userRole
   const isPageAllowed = (p, role) => {
     if (p === "landing" || p === "login" || p === "register") return true;
     if (!role) return false;
-    if (p === "pilgrim") return true;
-    if (p === "booking_center") return true;
-    if (p === "travel_assistant") return true;
-    if (p === "sacred_places") return true;
-    if (p === "government") return role === "government";
-    if (p === "temple") return role === "temple";
-    if (p === "hotel") return role === "hotel" || role === "temple";
-    if (p === "travel") return role === "travel" || role === "temple";
+    if (role === "pilgrim") {
+      return ["pilgrim", "booking_center", "travel_assistant", "sacred_places"].includes(p);
+    }
+    if (role === "government") return p === "government";
+    if (role === "temple") {
+      return ["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(p);
+    }
+    if (role === "hotel") return p === "hotel";
+    if (role === "travel") return p === "travel";
     return false;
   };
 
   useEffect(() => {
     if (!isPageAllowed(page, userRole)) {
       if (userRole) {
-        setPage(userRole);
+        setPage(userRole === "temple" ? "temple_overview" : userRole);
       } else {
         setPage("login");
       }
@@ -3390,7 +3174,7 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      {showNav && <Navbar currentPage={page} setPage={setPageWithScroll} />}
+      {showNav && <Navbar currentPage={page} setPage={setPageWithScroll} userRole={userRole} setUserRole={setUserRole} />}
       {page === "landing" && <LandingPage setPage={setPageWithScroll} />}
       {page === "login" && <LoginPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
       {page === "register" && <RegisterPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
@@ -3400,7 +3184,19 @@ export default function App() {
       {page === "sacred_places" && <SacredPlacesDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
       {page === "hotel" && <HotelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
       {page === "travel" && <TravelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
-      {page === "temple" && <TempleDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(page) && (
+        <TempleDashboard
+          setPage={setPageWithScroll}
+          stats={stats}
+          userRole={userRole}
+          setUserRole={setUserRole}
+          activeTab={page}
+          forecastDevoteeCount={forecastDevoteeCount}
+          setForecastDevoteeCount={setForecastDevoteeCount}
+          stocks={stocks}
+          setStocks={setStocks}
+        />
+      )}
       {page === "government" && <GovernmentDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
     </div>
   );

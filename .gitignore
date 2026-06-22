@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+**/node_modules/
 jspm_packages/
 
 # Production / Build outputs
@@ -36,3 +37,14 @@ pnpm-debug.log*
 .gemini/
 .antigravity/
 .antigravity-ide/
+
+# Python files and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/

@@ -1,53 +1,78 @@
-# Tirupati Tourism Forecasting & Smart Temple Management
+# 🔱 Tirumala Smart Pilgrimage & Temple Management
 
-A full-stack web application designed for forecasting pilgrim tourism at the Tirupati Balaji Temple and providing smart management actions for pilgrims.
-
-## Project Structure
-
-The project is structured as a monorepo containing both the frontend and backend:
-
-*   **`frontend/`**: React single page application built with Vite, Tailwind CSS, Material UI (MUI), and Radix UI components.
-*   **`backend/`**: Express.js server on Node.js handling the forecasting logic, API routes, and pilgrim actions.
-*   **`package.json`**: Root configuration that coordinates scripts for installing and running the entire application concurrently.
+A premium AI-powered full-stack web application designed for pilgrim flow forecasting, logistics planning, and smart infrastructure management at the Tirumala Tirupati Devasthanams (TTD).
 
 ---
 
-## Getting Started
+## 🚀 Quick Start (Run Concurrently)
 
-### Prerequisites
+Follow these two steps to get the entire project up and running:
 
-Make sure you have [Node.js](https://nodejs.org/) installed (v18+ recommended).
-
-### 1. Installation
-
-Instead of installing packages in each folder manually, you can install the root, frontend, and backend dependencies all at once using the custom root script:
-
+### 1. Install All Dependencies
+Run the command in the root folder to install dependencies for both `frontend` and `backend`:
 ```bash
 npm run install-all
 ```
 
-This runs the installer in both subdirectories under the hood:
-*   Frontend dependencies (`npm install --prefix frontend`)
-*   Backend dependencies (`npm install --prefix backend`)
-
-### 2. Running in Development Mode
-
-To start both the Express backend and the Vite frontend concurrently:
-
+### 2. Start Development Servers
+Start both the Express backend and Vite frontend servers concurrently:
 ```bash
 npm run dev
 ```
 
-*   The **Frontend** will be available at [http://localhost:5173](http://localhost:5173) (or the next available port indicated by Vite).
-*   The **Backend** will run on its configured port (defaulting to [http://localhost:5000](http://localhost:5000) or as specified in `backend/server.js`).
+* 🖥️ **Frontend:** [http://localhost:5173](http://localhost:5173)
+* ⚙️ **Backend:** [http://localhost:5000](http://localhost:5000)
 
 ---
 
-## Useful Commands
+## 🔑 Dashboard Access Guide
 
-| Command | Description |
-| :--- | :--- |
-| `npm run install-all` | Installs dependencies for root, frontend, and backend. |
-| `npm run dev` | Starts both the frontend and backend development servers simultaneously. |
-| `npm run frontend` | Runs only the frontend dev server. |
-| `npm run backend` | Runs only the backend start script. |
+The platform manages multiple user roles. Use the quick-login section at the bottom of the **Sign In** page (`/login`) to directly switch dashboards:
+
+| User Role | Navigation Target | Features Included |
+| :--- | :--- | :--- |
+| **Temple Admin** | `/temple_overview` | TTD Command Center, Laddu Production Silos, Annaprasadam Buffets, Security CCTV feeds, and System Sim Feed Controllers. |
+| **Pilgrim** | `/pilgrim` | Transportation Intelligence Hub, 3D Terrain Explorer, Travel Planner, Sacred Places, and AI Assistant. |
+| **Government** | `/government` | Macro Planning Analytics, Regional Influx Models, and Infrastructure stress forecasts. |
+| **Hotel Partner** | `/hotel` | Occupancy forecasting and staffing recommendations. |
+| **Travel Agency** | `/travel` | Transport dispatch metrics and commuter demand forecasts. |
+
+---
+
+## 🛠️ Simulating Alerts & Operations (Admin Only)
+
+When logged in as a **Temple Admin**, you can use the interactive widgets inside the **TTD Command Center**:
+* **Sim Feed Toggle (Nominal vs Alert)**:
+  * Click **Nominal** to simulate stable pilgrim flows (~65,000 devotees, full stock silos, regular RFID/CCTV feeds).
+  * Click **Alert** to test emergency responses (~235,000 devotee spike, rapid stock drainage under threshold, custom CCTV bounding boxes, and warning logs).
+* **Security CCTV Monitor**: Inside the *Security Command* tab, switch the roster card to **Live CCTV Monitor** to view simulated security feed diagnostics and change target camera nodes.
+
+---
+
+## 📂 Project Structure
+
+```
+├── backend/                  # Node.js + Express.js backend API
+│   ├── src/                  # Backend source files
+│   └── package.json          # Backend dependencies
+├── frontend/                 # Vite + React + Tailwind frontend SPA
+│   ├── src/                  # React dashboard pages and 3D components
+│   └── package.json          # Frontend dependencies
+├── package.json              # Root script orchestrator
+└── README.md                 # Project guide
+```
+
+---
+
+## ⚙️ Manual Commands (Optional)
+
+If you prefer to run components in separate terminal windows:
+
+* **Run Frontend Only**:
+  ```bash
+  npm run frontend
+  ```
+* **Run Backend Only**:
+  ```bash
+  npm run backend
+  ```
