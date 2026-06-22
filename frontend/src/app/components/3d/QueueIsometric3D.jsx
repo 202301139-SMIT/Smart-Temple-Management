@@ -89,8 +89,8 @@ export default function QueueIsometric3D() {
               </svg>
               
               {/* Pulsing particles running between zones */}
-              <div className="absolute w-2 h-2 rounded-full bg-[#B8860B] shadow-[0_0_8px_#B8860B] animate-[flow1_4s_infinite_linear]" style={{ left: '80px', top: '180px' }} />
-              <div className="absolute w-2 h-2 rounded-full bg-[#B8860B] shadow-[0_0_8px_#B8860B] animate-[flow2_4s_infinite_linear]" style={{ left: '150px', top: '150px' }} />
+              <div className="absolute w-2 h-2 rounded-full bg-[#B8860B] shadow-[0_0_8px_#B8860B] animate-flow1" style={{ left: '80px', top: '180px' }} />
+              <div className="absolute w-2 h-2 rounded-full bg-[#B8860B] shadow-[0_0_8px_#B8860B] animate-flow2" style={{ left: '150px', top: '150px' }} />
             </div>
 
             {/* LEVEL 1: Alipiri Checkpoint */}
@@ -129,7 +129,7 @@ export default function QueueIsometric3D() {
               <div className="text-[9px] opacity-75">Wait: 45 min</div>
               <div className="w-full bg-[#FFF8E7]/25 h-1 rounded-full overflow-hidden mt-1.5">
                 <div 
-                  className={`h-full ${activeZone === "vaikuntam" ? "bg-white" : "bg-[#B8860B]"} transition-all duration-500`}
+                  className={`h-full ${activeZone === "vaikuntam" ? "bg-white" : "bg-[#B8860B]"}`}
                   style={{ width: "72%" }}
                 />
               </div>
@@ -156,6 +156,12 @@ export default function QueueIsometric3D() {
 
           {/* CSS Animation styles inline for layout dots */}
           <style dangerouslySetInnerHTML={{__html: `
+            .animate-flow1 {
+              animation: flow1 4s infinite linear;
+            }
+            .animate-flow2 {
+              animation: flow2 4s infinite linear;
+            }
             @keyframes flow1 {
               0% { transform: translate3d(0, 0, 10px); opacity: 0; }
               10% { opacity: 1; }

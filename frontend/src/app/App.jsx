@@ -60,7 +60,9 @@ import InteractiveWaitSimulator from "./components/dashboard/InteractiveWaitSimu
 import TempleResourceRadar from "./components/dashboard/TempleResourceRadar";
 import CrowdCorrelationChart from "./components/dashboard/CrowdCorrelationChart";
 import ServiceSpecificAnalytics from "./components/dashboard/ServiceSpecificAnalytics";
-import PilgrimIntelligenceCenter, { PilgrimBookingCenter } from "./components/dashboard/PilgrimIntelligenceCenter";
+import PilgrimIntelligenceCenter, { PilgrimBookingCenter, PilgrimNews, FutureScopeRoadmap } from "./components/dashboard/PilgrimIntelligenceCenter";
+import TravelAssistant from "./components/dashboard/TravelAssistant";
+import SacredPlaces from "./components/dashboard/SacredPlaces";
 
 
 // ─── Chart Data ──────────────────────────────────────────────────────────────
@@ -181,7 +183,7 @@ function Navbar({ currentPage, setPage }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const isDashboard = ["pilgrim", "hotel", "travel", "temple", "booking_center"].includes(
+  const isDashboard = ["pilgrim", "hotel", "travel", "temple", "booking_center", "travel_assistant", "sacred_places"].includes(
     currentPage,
   );
 
@@ -193,7 +195,7 @@ function Navbar({ currentPage, setPage }) {
           : "bg-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 h-12 flex items-center justify-between">
         <button
           onClick={() => setPage("landing")}
           className="flex items-center gap-2.5"
@@ -214,7 +216,7 @@ function Navbar({ currentPage, setPage }) {
         <div className="hidden md:flex items-center gap-6">
           {isDashboard ? (
             <>
-              {["pilgrim", "booking_center", "hotel", "travel", "temple"].map((p) => (
+              {["pilgrim", "booking_center", "travel_assistant", "sacred_places", "hotel", "travel", "temple"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPage(p)}
@@ -230,7 +232,11 @@ function Navbar({ currentPage, setPage }) {
                       ? "Travel Agency"
                       : p === "booking_center"
                         ? "Ticket & Services"
-                        : p.charAt(0).toUpperCase() + p.slice(1)}
+                        : p === "travel_assistant"
+                          ? "Travel Assistant"
+                          : p === "sacred_places"
+                            ? "Sacred Place's"
+                            : p.charAt(0).toUpperCase() + p.slice(1)}
                 </button>
               ))}
               <button
@@ -313,6 +319,24 @@ function Navbar({ currentPage, setPage }) {
             className="text-sm text-[#5C3A1E] text-left"
           >
             Pilgrim Dashboard
+          </button>
+          <button
+            onClick={() => {
+              setPage("travel_assistant");
+              setMenuOpen(false);
+            }}
+            className="text-sm text-[#5C3A1E] text-left"
+          >
+            Travel Assistant
+          </button>
+          <button
+            onClick={() => {
+              setPage("sacred_places");
+              setMenuOpen(false);
+            }}
+            className="text-sm text-[#5C3A1E] text-left"
+          >
+            Sacred Place's
           </button>
           <button
             onClick={() => {
@@ -1627,6 +1651,8 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
     { page: "government", label: "Government Analytics", icon: Building2 },
     { page: "pilgrim", label: "Pilgrim Details", icon: Users },
     { page: "booking_center", label: "Ticket & Services", icon: Ticket },
+    { page: "travel_assistant", label: "Travel Assistant", icon: Compass },
+    { page: "sacred_places", label: "Sacred Place's", icon: MapPin },
     { page: "hotel", label: "Hotel Partner", icon: Hotel },
     { page: "travel", label: "Travel Agency", icon: Truck },
     { page: "temple", label: "Temple Mgmt", icon: Shield },
@@ -1635,6 +1661,8 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
   const navItems = allNavItems.filter(({ page }) => {
     if (page === "pilgrim") return true;
     if (page === "booking_center") return true;
+    if (page === "travel_assistant") return true;
+    if (page === "sacred_places") return true;
     if (!userRole) return false;
     if (page === "government") return userRole === "government";
     if (page === "temple") return userRole === "temple";
@@ -1644,12 +1672,12 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
   });
 
   return (
-    <div className="min-h-screen bg-[#FFF8E7] flex pt-16">
+    <div className="min-h-screen bg-[#FFF8E7] flex pt-12">
       {/* Sidebar */}
-      <aside className={`hidden lg:flex flex-col bg-white border-r border-[#B8860B]/10 fixed left-0 top-16 bottom-0 z-30 transition-all duration-300 ${
+      <aside className={`hidden lg:flex flex-col bg-white border-r border-[#B8860B]/10 fixed left-0 top-12 bottom-0 z-30 transition-all duration-300 ${
         isSidebarCollapsed ? "w-0 overflow-hidden opacity-0 pointer-events-none" : "w-56"
       }`}>
-        <div className="h-16 flex items-center justify-between px-5 border-b border-[#B8860B]/10">
+        <div className="h-12 flex items-center justify-between px-5 border-b border-[#B8860B]/10">
           <span className="font-cinzel font-semibold text-[#2C1810] text-xs">
             Smart Pilgrimage
           </span>
@@ -1695,7 +1723,7 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
         isSidebarCollapsed ? "lg:ml-0" : "lg:ml-56"
       }`}>
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-[#B8860B]/10 flex items-center justify-between px-6 sticky top-16 z-20">
+        <header className="h-12 bg-white border-b border-[#B8860B]/10 flex items-center justify-between px-6 z-20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -1806,8 +1834,6 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
 
       <div className="space-y-6 mb-6">
         {/* Crowd forecast chart */}
-
-        {/* Crowd forecast chart */}
         <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -1865,8 +1891,8 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
           </ResponsiveContainer>
         </div>
 
-        {/* Pilgrim Intelligence Center */}
-        <PilgrimIntelligenceCenter userRole={userRole} />
+        {/* News Bulletins */}
+        <PilgrimNews />
 
         {/* Interactive Wait Simulator Chart */}
         <InteractiveWaitSimulator />
@@ -1879,7 +1905,7 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
       </div>
 
       {/* Weather + recommendations */}
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
         <div className="bg-white rounded-2xl p-6 border border-[#B8860B]/10">
           <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm mb-4">
             5-Day Weather — Tirumala Hills
@@ -1992,6 +2018,41 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
           </div>
         </div>
       </div>
+
+      {/* Future Scope roadmap */}
+      <FutureScopeRoadmap />
+    </DashboardShell>
+  );
+}
+
+// ─── Travel Assistant Dashboard ────────────────────────────────────────────────
+function TravelAssistantDashboard({ setPage, stats, userRole, setUserRole }) {
+  return (
+    <DashboardShell
+      title="Travel Assistant"
+      subtitle="AI-driven travel route planning, comparative analysis, and smart itinerary forecasting"
+      setPage={setPage}
+      currentPage="travel_assistant"
+      userRole={userRole}
+      setUserRole={setUserRole}
+    >
+      <TravelAssistant />
+    </DashboardShell>
+  );
+}
+
+// ─── Sacred Places Dashboard ───────────────────────────────────────────────────
+function SacredPlacesDashboard({ setPage, stats, userRole, setUserRole }) {
+  return (
+    <DashboardShell
+      title="Sacred Place's"
+      subtitle="Explore the sacred Sapthagiri hills and nearby temples surrounding Tirumala"
+      setPage={setPage}
+      currentPage="sacred_places"
+      userRole={userRole}
+      setUserRole={setUserRole}
+    >
+      <SacredPlaces />
     </DashboardShell>
   );
 }
@@ -3266,6 +3327,8 @@ export default function App() {
     if (!role) return false;
     if (p === "pilgrim") return true;
     if (p === "booking_center") return true;
+    if (p === "travel_assistant") return true;
+    if (p === "sacred_places") return true;
     if (p === "government") return role === "government";
     if (p === "temple") return role === "temple";
     if (p === "hotel") return role === "hotel" || role === "temple";
@@ -3333,6 +3396,8 @@ export default function App() {
       {page === "register" && <RegisterPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
       {page === "pilgrim" && <PilgrimDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
       {page === "booking_center" && <BookingCenterDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "travel_assistant" && <TravelAssistantDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "sacred_places" && <SacredPlacesDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
       {page === "hotel" && <HotelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
       {page === "travel" && <TravelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
       {page === "temple" && <TempleDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}

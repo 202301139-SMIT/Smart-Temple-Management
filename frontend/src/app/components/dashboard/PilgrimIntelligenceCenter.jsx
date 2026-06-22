@@ -2344,3 +2344,138 @@ export function PilgrimBookingCenter({ userRole }) {
     </div>
   );
 }
+
+// --- Modular exports for Pilgrim Details page ---
+export function PilgrimNews() {
+  const [newsFilter, setNewsFilter] = useState("All");
+  const [tickerIndex, setTickerIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % newsAlerts.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
+
+  const filteredNews = newsAlerts.filter((item) => {
+    if (newsFilter === "All") return true;
+    return item.cat === newsFilter;
+  });
+
+  return (
+    <section className="bg-white/70 backdrop-blur border border-[#B8860B]/15 shadow-xl rounded-2xl p-6">
+      <div className="border-b border-[#B8860B]/10 pb-4 mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
+        <div>
+          <h3 className="font-cinzel font-bold text-xl text-[#2C1810]">
+            News & Notification Center
+          </h3>
+          <p className="text-xs text-[#8B6B47] mt-0.5">
+            Real-time transit bulletins, weather warnings, and temple announcements.
+          </p>
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {["All", "APSRTC", "Weather", "Railway", "Emergency"].map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setNewsFilter(filter)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all cursor-pointer ${
+                newsFilter === filter
+                  ? "bg-[#B8860B] text-white border-transparent"
+                  : "bg-white text-[#8B6B47] border-[#B8860B]/20 hover:border-[#B8860B]"
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-[#FFF8E7] border border-[#B8860B]/15 rounded-xl px-4 py-2.5 mb-6 flex items-center justify-between gap-3 overflow-hidden shadow-inner">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+          <span className="text-[9px] font-bold text-red-700 uppercase tracking-wider bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+            Live Alert
+          </span>
+        </div>
+        <div className="flex-1 overflow-hidden h-4 relative">
+          <span className="text-[11px] text-[#8B4513] font-medium transition-all duration-500 ease-in-out absolute w-full block truncate">
+            {newsAlerts[tickerIndex].title}
+          </span>
+        </div>
+        <span className="text-[9px] text-[#8B6B47] font-semibold italic flex-shrink-0">{newsAlerts[tickerIndex].time}</span>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        {filteredNews.map((item) => (
+          <div
+            key={item.id}
+            className={`p-4 rounded-xl border hover:shadow-md transition-shadow bg-white flex items-start gap-3.5 ${
+              item.type === "emergency" ? "border-red-500/20 bg-red-50/10" :
+              item.type === "alert" ? "border-orange-500/20 bg-orange-50/10" : "border-[#B8860B]/10"
+            }`}
+          >
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              item.type === "emergency" ? "bg-red-500/15 text-red-600" :
+              item.type === "alert" ? "bg-orange-500/15 text-orange-600" : "bg-[#B8860B]/10 text-[#B8860B]"
+            }`}>
+              {item.cat === "APSRTC" && <Bus size={15} />}
+              {item.cat === "Weather" && <CloudSun size={15} />}
+              {item.cat === "Temple" && <Award size={15} />}
+              {item.cat === "Railway" && <Train size={15} />}
+              {item.cat === "Emergency" && <AlertTriangle size={15} />}
+              {item.cat === "Airport" && <Plane size={15} />}
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-[#B8860B] uppercase tracking-wide">{item.cat} Update</span>
+                <span className="text-[9px] text-[#8B6B47] font-medium">{item.time}</span>
+              </div>
+              <p className="text-xs text-[#2C1810] leading-relaxed font-semibold">{item.title}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function FutureScopeRoadmap() {
+  const roadmapItems = [
+    { phase: "Phase 1.0", title: "Real-Time Tracking", desc: "APSRTC GPS integration for live ghat bus location updates." },
+    { phase: "Phase 1.2", title: "Live Crowd Heatmaps", desc: "LiDAR and camera sensor networks to monitor Vaikuntam complexes." },
+    { phase: "Phase 1.5", title: "AI Route Optimization", desc: "Automated traffic diversion algorithms during peak festival hours." },
+    { phase: "Phase 1.8", title: "Predictive Parking", desc: "Machine Learning models to forecast spot availability at hilltop garages." },
+    { phase: "Phase 2.0", title: "Hotel Demand ML", desc: "Advanced occupancy forecasting utilizing machine learning classifiers." },
+    { phase: "Phase 2.2", title: "Delay Alerts Integration", desc: "Real-time updates on airport flight status and railway schedule lags." },
+    { phase: "Phase 2.5", title: "AR Navigation App", desc: "Augmented Reality helper for devotees inside complex temple sectors." },
+    { phase: "Phase 3.0", title: "Digital Twin Models", desc: "Simulations of the entire Tirumala landscape to optimize crowd gates." },
+  ];
+
+  return (
+    <section className="bg-[#FFF8E7]/45 border border-[#B8860B]/10 rounded-2xl p-6 shadow-sm">
+      <div className="border-b border-[#B8860B]/10 pb-3 mb-6">
+        <h4 className="font-cinzel font-bold text-base text-[#2C1810]">Future Scope & Development Roadmap</h4>
+        <p className="text-[10px] text-[#8B6B47] mt-0.5">
+          Sneak peek into upcoming platform modules scheduled for development.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {roadmapItems.map((item, index) => (
+          <div key={index} className="p-3.5 bg-white border border-[#B8860B]/10 rounded-xl flex flex-col justify-between space-y-2 relative group hover:border-[#B8860B]/30 hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-bold text-[#B8860B] uppercase tracking-wide bg-[#FFF8E7] px-1.5 py-0.5 rounded border border-[#B8860B]/15">
+                {item.phase}
+              </span>
+              <span className="text-[8px] font-bold text-[#8B6B47] uppercase">Upcoming</span>
+            </div>
+            <div>
+              <h5 className="font-cinzel font-bold text-xs text-[#2C1810] mb-0.5 group-hover:text-[#B8860B] transition-colors">{item.title}</h5>
+              <p className="text-[9px] text-[#8B6B47] leading-relaxed">{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
