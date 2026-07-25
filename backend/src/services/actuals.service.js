@@ -18,17 +18,21 @@ const ensureForecastRecordExists = async (targetDate, userId) => {
   const latestBefore = await ActualPilgrimCount.findOne(filter).sort({ date: -1 }).lean();
 
   const baseActualsFilter = {
-    date: { $lt: targetDate, $gte: new Date("2025-06-01T00:00:00.000Z") }
+    date: { $lt: targetDate, $gte: new Date("2025-06-07T00:00:00.000Z") }
   };
   if (isSimulationModeEnabled()) {
     baseActualsFilter.date.$lte = getSimulatedDate();
   }
 
   const baseActuals = await ActualPilgrimCount.find(baseActualsFilter).sort({ date: 1 }).lean();
-  const appendedCounts = baseActuals.map(a => a.count);
+  const appendedActuals = baseActuals.map((actual) => ({
+    date: actual.date.toISOString().split("T")[0],
+    actualCount: actual.count
+  }));
 
   const predictedCount = await predictWithSarimax({
-    appendActualCount: appendedCounts.length > 0 ? appendedCounts : undefined,
+    appendActuals: appendedActuals.length > 0 ? appendedActuals : undefined,
+    forecastStartDate: targetDate.toISOString().split("T")[0],
     steps: 1
   });
 

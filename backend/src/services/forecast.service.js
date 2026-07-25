@@ -26,8 +26,8 @@ export const calculateMAPE = (actual, predicted) => {
 };
 
 // Start date of the rolling forecast system (sequence transition)
-const ROLLING_START_DATE = new Date("2025-06-01T00:00:00.000Z");
-const BASE_ACTUAL_DATE = new Date("2025-05-31T00:00:00.000Z");
+const ROLLING_START_DATE = new Date("2025-06-07T00:00:00.000Z");
+const BASE_ACTUAL_DATE = new Date("2025-06-06T00:00:00.000Z");
 
 // Retrieve all actual pilgrim counts from 2025-06-01 onwards, sorted by date ascending (filtering future data in simulation mode)
 export const getAppendedActualCounts = async () => {
@@ -37,6 +37,18 @@ export const getAppendedActualCounts = async () => {
   }
   const actuals = await ActualPilgrimCount.find(filter).sort({ date: 1 }).lean();
   return actuals.map(a => a.count);
+};
+
+export const getAppendedActuals = async () => {
+  const filter = { date: { $gte: ROLLING_START_DATE } };
+  if (isSimulationModeEnabled()) {
+    filter.date.$lte = getSimulatedDate();
+  }
+  const actuals = await ActualPilgrimCount.find(filter).sort({ date: 1 }).lean();
+  return actuals.map((actual) => ({
+    date: formatUTCDate(actual.date),
+    actualCount: actual.count,
+  }));
 };
 
 // Retrieve the date of the latest actual pilgrim count in the database (filtering future data in simulation mode)
@@ -50,9 +62,9 @@ export const getLatestActualDate = async () => {
 };
 
 // Predict and save forecasts for a range of dates relative to the latest actual count
-export const generateForecastRange = async (startStepDate, endStepDate, userId) => {
+export const generateForecastRange = async (startStepDate, endStepDate, userId, skipAppend = false) => {
   const latestActualDate = await getLatestActualDate();
-  const appendedCounts = await getAppendedActualCounts();
+  const appendedActuals = skipAppend ? [] : await getAppendedActuals();
 
   const start = normalizeToUTC(startStepDate);
   const end = normalizeToUTC(endStepDate);
@@ -66,7 +78,8 @@ export const generateForecastRange = async (startStepDate, endStepDate, userId) 
 
   // Call SARIMAX model to forecast maxSteps ahead
   const predictions = await predictWithSarimax({
-    appendActualCount: appendedCounts.length > 0 ? appendedCounts : undefined,
+    appendActuals: appendedActuals.length > 0 ? appendedActuals : undefined,
+    forecastStartDate: formatUTCDate(start),
     steps: maxSteps
   });
 
@@ -115,7 +128,7 @@ export const getTomorrowForecast = async (userId) => {
   // Check if tomorrow's forecast already exists
   let forecast = await ForecastRecord.findOne({ date: tomorrowDate });
   if (!forecast || forecast.status === "PENDING") {
-    const generated = await generateForecastRange(tomorrowDate, tomorrowDate, userId);
+    const generated = await generateForecastRange(tomorrowDate, tomorrowDate, userId, true);
     forecast = generated[0] || forecast;
   }
 
@@ -137,7 +150,7 @@ export const getNext7DaysForecast = async (userId) => {
   const endDate = new Date(baseDate);
   endDate.setUTCDate(endDate.getUTCDate() + 7);
 
-  await generateForecastRange(tomorrowDate, endDate, userId);
+  await generateForecastRange(tomorrowDate, endDate, userId, false);
 
   const forecasts = await ForecastRecord.find({
     date: { $gte: tomorrowDate, $lte: endDate }

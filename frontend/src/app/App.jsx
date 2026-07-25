@@ -67,6 +67,7 @@ import PilgrimIntelligenceCenter, { PilgrimBookingCenter, PilgrimNews, FutureSco
 import TravelAssistant from "./components/dashboard/TravelAssistant";
 import SacredPlaces from "./components/dashboard/SacredPlaces";
 import TempleOperations from "./components/dashboard/TempleOperations";
+import { api } from "./lib/api";
 
 
 // ─── Chart Data ──────────────────────────────────────────────────────────────
@@ -118,6 +119,48 @@ const IMAGES = {
   temple2:
     "https://images.unsplash.com/photo-1733805569204-41768c7d8c0f?w=800&h=600&fit=crop&auto=format",
 };
+
+const ADMIN_BACKEND_ROLES = [
+  "SUPER_ADMIN",
+  "TTD_ADMIN",
+  "SECURITY_HEAD",
+  "CHEF_MANAGER",
+  "MEDICAL_MANAGER",
+];
+
+function getFrontendRole(role) {
+  if (role === "PILGRIM") return "pilgrim";
+  if (role === "HOTEL_PARTNER") return "hotel";
+  if (role === "TRAVEL_PARTNER") return "travel";
+  if (ADMIN_BACKEND_ROLES.includes(role)) return "temple";
+  return null;
+}
+
+function getDashboardPageForRole(role) {
+  if (role === "pilgrim") return "pilgrim";
+  if (role === "hotel") return "hotel";
+  if (role === "travel") return "travel";
+  if (role === "temple") return "temple_overview";
+  return "login";
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "0";
+  }
+  return Number(value).toLocaleString("en-IN");
+}
+
+function formatShortCount(value) {
+  const count = Number(value || 0);
+  if (count >= 100000) return `${(count / 100000).toFixed(2)}L`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return formatNumber(count);
+}
+
+function formatDayLabel(date) {
+  return new Date(date).toLocaleDateString("en-IN", { weekday: "short" });
+}
 
 // ─── Shared Components ────────────────────────────────────────────────────────
 function GoldDivider() {
@@ -177,7 +220,7 @@ function StatBadge({ value, label, trend }) {
 }
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
-function Navbar({ currentPage, setPage, userRole, setUserRole }) {
+function Navbar({ currentPage, setPage, userRole, setUserRole, onLogout }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -187,7 +230,7 @@ function Navbar({ currentPage, setPage, userRole, setUserRole }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const isDashboard = ["pilgrim", "hotel", "travel", "temple", "booking_center", "travel_assistant", "sacred_places", "government"].includes(
+  const isDashboard = ["pilgrim", "hotel", "travel", "temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility", "booking_center", "travel_assistant", "sacred_places"].includes(
     currentPage,
   );
 
@@ -197,7 +240,6 @@ function Navbar({ currentPage, setPage, userRole, setUserRole }) {
     if (role === "pilgrim") {
       return ["pilgrim", "booking_center", "travel_assistant", "sacred_places"].includes(p);
     }
-    if (role === "government") return p === "government";
     if (role === "temple") {
       return ["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(p);
     }
@@ -263,11 +305,7 @@ function Navbar({ currentPage, setPage, userRole, setUserRole }) {
                 <>
                   <button
                     onClick={() => {
-                      if (userRole === "pilgrim") setPage("pilgrim");
-                      else if (userRole === "government") setPage("government");
-                      else if (userRole === "temple") setPage("temple_overview");
-                      else if (userRole === "hotel") setPage("hotel");
-                      else if (userRole === "travel") setPage("travel");
+                      setPage(getDashboardPageForRole(userRole));
                     }}
                     className="text-xs tracking-wider uppercase font-medium text-[#8B6B47] hover:text-[#B8860B] transition-colors"
                   >
@@ -275,8 +313,7 @@ function Navbar({ currentPage, setPage, userRole, setUserRole }) {
                   </button>
                   <button
                     onClick={() => {
-                      if (typeof setUserRole === "function") setUserRole(null);
-                      setPage("landing");
+                      if (typeof onLogout === "function") onLogout();
                     }}
                     className="px-4 py-2 rounded-full bg-white/10 backdrop-blur border border-[#B8860B]/30 text-[#B8860B] text-xs font-semibold hover:bg-[#B8860B]/5 transition-colors"
                   >
@@ -405,22 +442,10 @@ function Navbar({ currentPage, setPage, userRole, setUserRole }) {
               Temple Dashboard
             </button>
           )}
-          {userRole && isPageAllowed("government", userRole) && (
-            <button
-              onClick={() => {
-                setPage("government");
-                setMenuOpen(false);
-              }}
-              className="text-sm text-[#5C3A1E] text-left"
-            >
-              Government Analytics
-            </button>
-          )}
           {userRole && (
             <button
               onClick={() => {
-                if (typeof setUserRole === "function") setUserRole(null);
-                setPage("landing");
+                if (typeof onLogout === "function") onLogout();
                 setMenuOpen(false);
               }}
               className="text-sm text-[#B8860B] font-semibold text-left pt-2 border-t border-[#B8860B]/10"
@@ -1282,10 +1307,32 @@ function LandingPage({ setPage }) {
 }
 
 // ─── Login Page ───────────────────────────────────────────────────────────────
-function LoginPage({ setPage, setUserRole }) {
+function LoginPage({ setPage, setUserRole, setCurrentUser }) {
   const [showPw, setShowPw] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.login({ email, password });
+      const user = data.user;
+      const role = getFrontendRole(user?.role);
+      if (!role) {
+        throw new Error("This role does not have a frontend dashboard yet.");
+      }
+      setCurrentUser(user);
+      setUserRole(role);
+      setPage(getDashboardPageForRole(role));
+    } catch (err) {
+      setError(err.message || "Unable to sign in");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-[#FFF8E7]">
@@ -1395,58 +1442,19 @@ function LoginPage({ setPage, setUserRole }) {
               </button>
             </div>
 
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
             <button
-              onClick={() => {
-                let role = "pilgrim";
-                const lowerEmail = email.toLowerCase();
-                if (lowerEmail.includes("gov")) {
-                  role = "government";
-                } else if (lowerEmail.includes("admin") || lowerEmail.includes("temple")) {
-                  role = "temple";
-                } else if (lowerEmail.includes("hotel")) {
-                  role = "hotel";
-                } else if (lowerEmail.includes("travel")) {
-                  role = "travel";
-                }
-                setUserRole(role);
-                setPage(role === "temple" ? "temple_overview" : role);
-              }}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2"
+              onClick={handleLogin}
+              disabled={loading || !email || !password}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </button>
-
-            <div className="relative flex items-center gap-3 py-1">
-              <div className="flex-1 h-px bg-[#B8860B]/15" />
-              <span className="text-xs text-[#8B6B47]">or continue as</span>
-              <div className="flex-1 h-px bg-[#B8860B]/15" />
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {["Pilgrim", "Government", "Hotel", "Travel Agency", "Temple Admin"].map(
-                (role) => (
-                  <button
-                    key={role}
-                    onClick={() => {
-                      const pageMap = {
-                        "Pilgrim": "pilgrim",
-                        "Government": "government",
-                        "Hotel": "hotel",
-                        "Travel Agency": "travel",
-                        "Temple Admin": "temple_overview"
-                      };
-                      const targetPage = pageMap[role];
-                      const targetRole = targetPage === "temple_overview" ? "temple" : targetPage;
-                      setUserRole(targetRole);
-                      setPage(targetPage);
-                    }}
-                    className="py-2 px-2 rounded-xl border border-[#B8860B]/20 text-[#5C3A1E] text-[10px] font-medium hover:border-[#B8860B]/50 hover:bg-[#B8860B]/5 transition-colors text-center truncate"
-                  >
-                    {role}
-                  </button>
-                ),
-              )}
-            </div>
 
             <p className="text-center text-sm text-[#8B6B47] pt-2">
               New to the platform?{" "}
@@ -1465,8 +1473,48 @@ function LoginPage({ setPage, setUserRole }) {
 }
 
 // ─── Register Page ────────────────────────────────────────────────────────────
-function RegisterPage({ setPage, setUserRole }) {
+function RegisterPage({ setPage, setUserRole, setCurrentUser }) {
   const [userType, setUserType] = useState("pilgrim");
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const updateField = (field) => (event) => {
+    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  const handleRegister = async () => {
+    if (userType !== "pilgrim") {
+      setError("Partner and admin accounts must be created by an authorized admin.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      await api.registerPilgrim({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+      });
+      const data = await api.login({ email: form.email, password: form.password });
+      const user = data.user;
+      setCurrentUser(user);
+      setUserRole("pilgrim");
+      setPage("pilgrim");
+    } catch (err) {
+      setError(err.message || "Unable to create account");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-[#FFF8E7]">
@@ -1535,7 +1583,7 @@ function RegisterPage({ setPage, setUserRole }) {
 
           {/* User type tabs */}
           <div className="flex gap-1 p-1 bg-white rounded-xl border border-[#B8860B]/15 mb-6">
-            {["pilgrim", "government", "hotel", "travel"].map((t) => (
+            {["pilgrim", "hotel", "travel"].map((t) => (
               <button
                 key={t}
                 onClick={() => setUserType(t)}
@@ -1545,13 +1593,7 @@ function RegisterPage({ setPage, setUserRole }) {
                     : "text-[#8B6B47] hover:text-[#B8860B]"
                 }`}
               >
-                {t === "pilgrim"
-                  ? "Pilgrim"
-                  : t === "government"
-                    ? "Government"
-                    : t === "hotel"
-                      ? "Hotel Partner"
-                      : "Travel Agency"}
+                {t === "pilgrim" ? "Pilgrim" : t === "hotel" ? "Hotel Partner" : "Travel Agency"}
               </button>
             ))}
           </div>
@@ -1559,21 +1601,34 @@ function RegisterPage({ setPage, setUserRole }) {
           <div className="space-y-4">
             {userType === "pilgrim" && (
               <>
-                <FormField label="Full Name" placeholder="Venkatesh Sharma" />
+                <FormField label="Full Name" placeholder="Venkatesh Sharma" value={form.name} onChange={updateField("name")} />
                 <FormField
                   label="Email Address"
                   type="email"
                   placeholder="you@example.com"
+                  value={form.email}
+                  onChange={updateField("email")}
                 />
                 <FormField
                   label="Mobile Number"
                   type="tel"
                   placeholder="+91 98765 43210"
+                  value={form.mobile}
+                  onChange={updateField("mobile")}
                 />
                 <FormField
                   label="Password"
                   type="password"
                   placeholder="Create a strong password"
+                  value={form.password}
+                  onChange={updateField("password")}
+                />
+                <FormField
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="Repeat your password"
+                  value={form.confirmPassword}
+                  onChange={updateField("confirmPassword")}
                 />
               </>
             )}
@@ -1643,25 +1698,24 @@ function RegisterPage({ setPage, setUserRole }) {
                 />
               </>
             )}
-            {userType === "government" && (
-              <>
-                <FormField label="Official Name" placeholder="Dr. R. K. Prasad" />
-                <FormField label="Department" placeholder="Ministry of Endowments" />
-                <FormField label="Government ID / Badge" placeholder="GOV-AP-9827" />
-                <FormField label="Official Email Address" type="email" placeholder="prasad.rk@ap.gov.in" />
-                <FormField label="Mobile Number" type="tel" placeholder="+91 94400 12345" />
-                <FormField label="Password" type="password" placeholder="••••••••" />
-              </>
+            {userType !== "pilgrim" && (
+              <div className="rounded-xl border border-[#B8860B]/15 bg-white px-4 py-3 text-sm text-[#8B6B47]">
+                Partner accounts are created from backend admin staff workflows. Please sign in if your account already exists.
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
             )}
 
             <button
-              onClick={() => {
-                setUserRole(userType);
-                setPage(userType);
-              }}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2"
+              onClick={handleRegister}
+              disabled={loading || userType !== "pilgrim"}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B8860B] to-[#D4A843] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#B8860B]/25 transition-all mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Create Account & Continue
+              {loading ? "Creating Account..." : "Create Account & Continue"}
             </button>
             <p className="text-center text-sm text-[#8B6B47]">
               Already registered?{" "}
@@ -1679,7 +1733,7 @@ function RegisterPage({ setPage, setUserRole }) {
   );
 }
 
-function FormField({ label, type = "text", placeholder }) {
+function FormField({ label, type = "text", placeholder, value, onChange }) {
   const [showPw, setShowPw] = useState(false);
   const isPassword = type === "password";
   return (
@@ -1691,6 +1745,8 @@ function FormField({ label, type = "text", placeholder }) {
         <input
           type={isPassword && !showPw ? "password" : isPassword ? "text" : type}
           placeholder={placeholder}
+          value={value}
+          onChange={onChange}
           className="w-full px-4 py-3 rounded-xl border border-[#B8860B]/20 bg-white text-[#2C1810] placeholder:text-[#B8860B]/30 focus:outline-none focus:border-[#B8860B] focus:ring-2 focus:ring-[#B8860B]/15 transition-all text-sm pr-10"
         />
 
@@ -1709,10 +1765,9 @@ function FormField({ label, type = "text", placeholder }) {
 }
 
 // ─── Dashboard Shell ──────────────────────────────────────────────────────────
-function DashboardShell({ title, subtitle, children, setPage, currentPage, userRole, setUserRole }) {
+function DashboardShell({ title, subtitle, children, setPage, currentPage, userRole, setUserRole, onLogout, currentUser }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const allNavItems = [
-    { page: "government", label: "Government Analytics", icon: Building2 },
     { page: "pilgrim", label: "Pilgrim Details", icon: Users },
     { page: "booking_center", label: "Ticket & Services", icon: Ticket },
     { page: "travel_assistant", label: "Travel Assistant", icon: Compass },
@@ -1731,7 +1786,6 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
     if (userRole === "pilgrim") {
       return ["pilgrim", "booking_center", "travel_assistant", "sacred_places"].includes(page);
     }
-    if (userRole === "government") return page === "government";
     if (userRole === "temple") {
       return ["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(page);
     }
@@ -1777,8 +1831,7 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
         <div className="p-4 border-t border-[#B8860B]/10">
           <button
             onClick={() => {
-              if (typeof setUserRole === "function") setUserRole(null);
-              setPage("landing");
+              if (typeof onLogout === "function") onLogout();
             }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-[#8B6B47] hover:text-[#B8860B] transition-colors"
           >
@@ -1815,7 +1868,7 @@ function DashboardShell({ title, subtitle, children, setPage, currentPage, userR
             </button>
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#B8860B] to-[#8B4513] flex items-center justify-center">
               <span className="text-white text-xs font-cinzel font-bold">
-                A
+                {(currentUser?.name || currentUser?.email || "A").charAt(0).toUpperCase()}
               </span>
             </div>
           </div>
@@ -1858,8 +1911,123 @@ function DashCard({ title, value, sub, icon: Icon, trend, trendVal }) {
   );
 }
 
+function TempleAdminSummary({ stats, currentUser }) {
+  const summary = stats?.adminSummary;
+  const staffStats = stats?.staffStatistics;
+  const metrics = stats?.metrics;
+  const latestForecast = summary?.latestForecast || stats?.forecast?.[0] || stats?.tomorrow;
+  const latestActual = summary?.latestActual || stats?.actualRecords?.[0];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <DashCard
+        title="Tomorrow Forecast"
+        value={formatShortCount(latestForecast?.predictedCount)}
+        sub={latestForecast?.date ? new Date(latestForecast.date).toLocaleDateString("en-IN") : "Live forecast"}
+        icon={Brain}
+      />
+      <DashCard
+        title="Latest Actual"
+        value={formatShortCount(latestActual?.count || latestActual?.actualCount)}
+        sub={latestActual?.date ? new Date(latestActual.date).toLocaleDateString("en-IN") : "No actual submitted"}
+        icon={Users}
+      />
+      <DashCard
+        title="Forecast Accuracy"
+        value={`${Math.max(0, 100 - Number(metrics?.averageMape || summary?.summary?.averageMape || 0)).toFixed(1)}%`}
+        sub={`${metrics?.totalCompleted || summary?.summary?.completedForecasts || 0} completed forecasts`}
+        icon={TrendingUp}
+      />
+      <DashCard
+        title="Signed In"
+        value={currentUser?.role?.replaceAll("_", " ") || "User"}
+        sub={staffStats ? `${staffStats.activeStaff} active staff` : currentUser?.email || "Authenticated session"}
+        icon={Shield}
+      />
+    </div>
+  );
+}
+
+function ActualCountSubmission({ onSubmitted }) {
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [actualCount, setActualCount] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setMessage("");
+    setError("");
+    try {
+      await api.addActualCount({ date, actualCount: Number(actualCount) });
+      setMessage("Actual count submitted successfully.");
+      setActualCount("");
+      if (typeof onSubmitted === "function") onSubmitted();
+    } catch (err) {
+      setError(err.message || "Unable to submit actual count");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-[#B8860B]/10 mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+        <div className="flex-1">
+          <h3 className="font-cinzel font-semibold text-[#2C1810] text-sm mb-1">
+            Actual Count Submission
+          </h3>
+          <p className="text-xs text-[#8B6B47]">
+            Submit verified pilgrim counts to update rolling forecast accuracy.
+          </p>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-[#5C3A1E] block mb-1">Date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="px-3 py-2 rounded-xl border border-[#B8860B]/20 text-sm text-[#2C1810] bg-white focus:outline-none focus:border-[#B8860B]"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-[#5C3A1E] block mb-1">Actual Count</label>
+          <input
+            type="number"
+            min="0"
+            value={actualCount}
+            onChange={(event) => setActualCount(event.target.value)}
+            placeholder="52000"
+            className="px-3 py-2 rounded-xl border border-[#B8860B]/20 text-sm text-[#2C1810] bg-white focus:outline-none focus:border-[#B8860B]"
+          />
+        </div>
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !date || actualCount === ""}
+          className="px-5 py-2.5 rounded-xl bg-[#B8860B] text-white text-sm font-semibold hover:bg-[#8B4513] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {loading ? "Submitting..." : "Submit"}
+        </button>
+      </div>
+      {(message || error) && (
+        <div className={`mt-3 text-xs font-medium ${error ? "text-red-600" : "text-green-700"}`}>
+          {error || message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Pilgrim Dashboard ────────────────────────────────────────────────────────
-function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
+function PilgrimDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
+  const tomorrowCount = stats?.tomorrow?.predictedCount || stats?.forecast?.[0]?.predictedCount;
+  const lowCrowdDay = stats?.forecast?.length
+    ? stats.forecast.reduce((min, item) =>
+        Number(item.predictedCount || 0) < Number(min.predictedCount || Infinity) ? item : min
+      )
+    : null;
+
   return (
     <DashboardShell
       title="Pilgrim Dashboard"
@@ -1868,13 +2036,15 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="pilgrim"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <DashCard
-          title="Today's Pilgrims"
-          value="28,450"
-          sub="Live count as of 2:30 PM"
+          title="Tomorrow Forecast"
+          value={tomorrowCount ? formatShortCount(tomorrowCount) : "28,450"}
+          sub={stats?.tomorrow?.confidenceLevel ? `${stats.tomorrow.confidenceLevel} confidence` : "Backend forecast"}
           icon={Users}
           trend="up"
           trendVal="+12%"
@@ -1889,8 +2059,8 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
         />
         <DashCard
           title="Best Visit Time"
-          value="Tue 5 AM"
-          sub="Lowest crowd predicted"
+          value={lowCrowdDay?.date ? formatDayLabel(lowCrowdDay.date) : "Tue 5 AM"}
+          sub={lowCrowdDay?.predictedCount ? `${formatNumber(lowCrowdDay.predictedCount)} pilgrims expected` : "Lowest crowd predicted"}
           icon={Calendar}
         />
         <DashCard
@@ -2095,7 +2265,7 @@ function PilgrimDashboard({ setPage, stats, userRole, setUserRole }) {
 }
 
 // ─── Travel Assistant Dashboard ────────────────────────────────────────────────
-function TravelAssistantDashboard({ setPage, stats, userRole, setUserRole }) {
+function TravelAssistantDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
   return (
     <DashboardShell
       title="Travel Assistant"
@@ -2104,6 +2274,8 @@ function TravelAssistantDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="travel_assistant"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       <TravelAssistant />
     </DashboardShell>
@@ -2111,7 +2283,7 @@ function TravelAssistantDashboard({ setPage, stats, userRole, setUserRole }) {
 }
 
 // ─── Sacred Places Dashboard ───────────────────────────────────────────────────
-function SacredPlacesDashboard({ setPage, stats, userRole, setUserRole }) {
+function SacredPlacesDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
   return (
     <DashboardShell
       title="Sacred Place's"
@@ -2120,6 +2292,8 @@ function SacredPlacesDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="sacred_places"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       <SacredPlaces />
     </DashboardShell>
@@ -2127,7 +2301,7 @@ function SacredPlacesDashboard({ setPage, stats, userRole, setUserRole }) {
 }
 
 // ─── Booking Center Dashboard ──────────────────────────────────────────────────
-function BookingCenterDashboard({ setPage, stats, userRole, setUserRole }) {
+function BookingCenterDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
   return (
     <DashboardShell
       title="Sacred Booking Terminal"
@@ -2136,6 +2310,8 @@ function BookingCenterDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="booking_center"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       <div className="space-y-6 mb-6">
         {/* Pilgrim Ticket & Action Center */}
@@ -2153,7 +2329,7 @@ function BookingCenterDashboard({ setPage, stats, userRole, setUserRole }) {
 }
 
 // ─── Hotel Dashboard ──────────────────────────────────────────────────────────
-function HotelDashboard({ setPage, stats, userRole, setUserRole }) {
+function HotelDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
   return (
     <DashboardShell
       title="Hotel Partner Dashboard"
@@ -2162,6 +2338,8 @@ function HotelDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="hotel"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <DashCard
@@ -2389,7 +2567,7 @@ function HotelDashboard({ setPage, stats, userRole, setUserRole }) {
 }
 
 // ─── Travel Agency Dashboard ──────────────────────────────────────────────────
-function TravelDashboard({ setPage, stats, userRole, setUserRole }) {
+function TravelDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
   return (
     <DashboardShell
       title="Travel Agency Dashboard"
@@ -2398,6 +2576,8 @@ function TravelDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="travel"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <DashCard
@@ -2629,6 +2809,9 @@ function TempleDashboard({
   stats,
   userRole,
   setUserRole,
+  onLogout,
+  currentUser,
+  onDataRefresh,
   activeTab,
   forecastDevoteeCount,
   setForecastDevoteeCount,
@@ -2636,7 +2819,7 @@ function TempleDashboard({
   setStocks,
 }) {
   const titles = {
-    temple_overview: "Operations Command Center",
+    temple_overview: "Temple Admin Dashboard",
     temple_laddu: "Laddu Operations Center",
     temple_annadanam: "Annadanam Operations Center",
     temple_security: "Security Command Center",
@@ -2658,7 +2841,13 @@ function TempleDashboard({
       currentPage={activeTab}
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
+      <TempleAdminSummary stats={stats} currentUser={currentUser} />
+      {ADMIN_BACKEND_ROLES.includes(currentUser?.role) && (
+        <ActualCountSubmission onSubmitted={onDataRefresh} />
+      )}
       <TempleOperations
         activeTab={activeTab}
         forecastDevoteeCount={forecastDevoteeCount}
@@ -2671,7 +2860,7 @@ function TempleDashboard({
 }
 
 // ─── Government Dashboard ─────────────────────────────────────────────────────
-function GovernmentDashboard({ setPage, stats, userRole, setUserRole }) {
+function GovernmentDashboard({ setPage, stats, userRole, setUserRole, onLogout, currentUser }) {
   const nextWeekForecast = [
     { day: "Monday", count: 48500, status: "Normal", capacity: "Safe", weather: "Sunny (24°C)", waitTime: "2h 10m" },
     { day: "Tuesday", count: 38200, status: "Optimal", capacity: "Safe", weather: "Clear (26°C)", waitTime: "1h 30m" },
@@ -2690,6 +2879,8 @@ function GovernmentDashboard({ setPage, stats, userRole, setUserRole }) {
       currentPage="government"
       userRole={userRole}
       setUserRole={setUserRole}
+      onLogout={onLogout}
+      currentUser={currentUser}
     >
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -3072,6 +3263,11 @@ export default function App() {
   const [page, setPage] = useState("landing");
   const prevPage = useRef("landing");
   const [userRole, setUserRole] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [forecastDevoteeCount, setForecastDevoteeCount] = useState(70000);
   const [stocks, setStocks] = useState({
@@ -3111,7 +3307,6 @@ export default function App() {
     if (role === "pilgrim") {
       return ["pilgrim", "booking_center", "travel_assistant", "sacred_places"].includes(p);
     }
-    if (role === "government") return p === "government";
     if (role === "temple") {
       return ["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(p);
     }
@@ -3135,14 +3330,120 @@ export default function App() {
     occupancyData: [],
     travelDemandData: [],
     templeWeeklyData: [],
+    tomorrow: null,
+    forecast: [],
+    history: [],
+    metrics: null,
+    adminSummary: null,
+    staffStatistics: null,
+    actualRecords: [],
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/stats")
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(err => console.log("Backend not running, using local mock fallbacks", err));
+    let active = true;
+    api.profile()
+      .then((user) => {
+        if (!active) return;
+        const role = getFrontendRole(user?.role);
+        setCurrentUser(user);
+        setUserRole(role);
+        if (role && page === "landing") {
+          setPage(getDashboardPageForRole(role));
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setCurrentUser(null);
+        setUserRole(null);
+      })
+      .finally(() => {
+        if (active) setAuthChecked(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let active = true;
+    const role = currentUser.role;
+    const canUseAdminApis = ["SUPER_ADMIN", "TTD_ADMIN"].includes(role);
+    const canUseActualApis = ADMIN_BACKEND_ROLES.includes(role);
+
+    async function loadDashboardData() {
+      setDataLoading(true);
+      setDataError("");
+      try {
+        const [next7, history, metrics, adminSummary, staffStatistics, actuals] = await Promise.all([
+          api.next7DaysForecast(),
+          api.forecastHistory(),
+          api.forecastMetrics(),
+          canUseAdminApis ? api.adminSummary().catch(() => null) : Promise.resolve(null),
+          canUseAdminApis ? api.staffStatistics().catch(() => null) : Promise.resolve(null),
+          canUseActualApis ? api.actualRecords().catch(() => ({ records: [] })) : Promise.resolve({ records: [] }),
+        ]);
+
+        if (!active) return;
+
+        const forecast = next7.forecast || [];
+        const historyRows = history.history || [];
+        const crowdRows = forecast.map((item) => ({
+          day: formatDayLabel(item.date),
+          pilgrims: item.actualCount || item.predictedCount,
+          forecast: item.predictedCount,
+        }));
+
+        const templeRows = forecast.map((item) => ({
+          week: formatDayLabel(item.date),
+          actual: item.actualCount || item.predictedCount,
+          predicted: item.predictedCount,
+          capacity: 160000,
+        }));
+
+        setStats((prev) => ({
+          ...prev,
+          crowdData: crowdRows,
+          templeWeeklyData: templeRows,
+          tomorrow: next7.tomorrow,
+          forecast,
+          history: historyRows,
+          metrics: metrics.metrics,
+          adminSummary,
+          staffStatistics,
+          actualRecords: actuals.records || [],
+        }));
+
+        const nextCount =
+          next7.tomorrow?.predictedCount ||
+          forecast[0]?.predictedCount ||
+          adminSummary?.latestForecast?.predictedCount;
+        if (nextCount) setForecastDevoteeCount(Number(nextCount));
+      } catch (err) {
+        if (active) setDataError(err.message || "Unable to load dashboard data");
+      } finally {
+        if (active) setDataLoading(false);
+      }
+    }
+
+    loadDashboardData();
+    return () => {
+      active = false;
+    };
+  }, [currentUser, refreshKey]);
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } catch (err) {
+      console.warn("Logout request failed", err);
+    } finally {
+      setCurrentUser(null);
+      setUserRole(null);
+      setPageWithScroll("landing");
+    }
+  };
 
   const setPageWithScroll = (p) => {
     prevPage.current = page;
@@ -3174,22 +3475,25 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      {showNav && <Navbar currentPage={page} setPage={setPageWithScroll} userRole={userRole} setUserRole={setUserRole} />}
+      {showNav && <Navbar currentPage={page} setPage={setPageWithScroll} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} />}
       {page === "landing" && <LandingPage setPage={setPageWithScroll} />}
-      {page === "login" && <LoginPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
-      {page === "register" && <RegisterPage setPage={setPageWithScroll} setUserRole={setUserRole} />}
-      {page === "pilgrim" && <PilgrimDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
-      {page === "booking_center" && <BookingCenterDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
-      {page === "travel_assistant" && <TravelAssistantDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
-      {page === "sacred_places" && <SacredPlacesDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
-      {page === "hotel" && <HotelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
-      {page === "travel" && <TravelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {page === "login" && <LoginPage setPage={setPageWithScroll} setUserRole={setUserRole} setCurrentUser={setCurrentUser} />}
+      {page === "register" && <RegisterPage setPage={setPageWithScroll} setUserRole={setUserRole} setCurrentUser={setCurrentUser} />}
+      {page === "pilgrim" && <PilgrimDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser} />}
+      {page === "booking_center" && <BookingCenterDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser} />}
+      {page === "travel_assistant" && <TravelAssistantDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser} />}
+      {page === "sacred_places" && <SacredPlacesDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser} />}
+      {page === "hotel" && <HotelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser} />}
+      {page === "travel" && <TravelDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} onLogout={handleLogout} currentUser={currentUser} />}
       {["temple_overview", "temple_laddu", "temple_annadanam", "temple_security", "temple_facility"].includes(page) && (
         <TempleDashboard
           setPage={setPageWithScroll}
           stats={stats}
           userRole={userRole}
           setUserRole={setUserRole}
+          onLogout={handleLogout}
+          currentUser={currentUser}
+          onDataRefresh={() => setRefreshKey((value) => value + 1)}
           activeTab={page}
           forecastDevoteeCount={forecastDevoteeCount}
           setForecastDevoteeCount={setForecastDevoteeCount}
@@ -3197,7 +3501,16 @@ export default function App() {
           setStocks={setStocks}
         />
       )}
-      {page === "government" && <GovernmentDashboard setPage={setPageWithScroll} stats={stats} userRole={userRole} setUserRole={setUserRole} />}
+      {dataLoading && userRole && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-xl border border-[#B8860B]/20 bg-white px-4 py-2 text-xs font-medium text-[#8B6B47] shadow-lg">
+          Loading live dashboard data...
+        </div>
+      )}
+      {dataError && userRole && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-700 shadow-lg">
+          {dataError}
+        </div>
+      )}
     </div>
   );
 }

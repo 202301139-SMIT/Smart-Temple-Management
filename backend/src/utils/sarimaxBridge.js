@@ -13,9 +13,16 @@ const MODEL_SCRIPT = path.resolve(
   "predict_sarimax.py"
 );
 
-export const predictWithSarimax = ({ appendActualCount, steps = 1 } = {}) => {
+export const predictWithSarimax = ({
+  appendActualCount,
+  appendActuals,
+  forecastStartDate,
+  steps = 1,
+} = {}) => {
   const payload = JSON.stringify({
     ...(appendActualCount !== undefined ? { appendActual: appendActualCount } : {}),
+    ...(appendActuals !== undefined ? { appendActuals } : {}),
+    ...(forecastStartDate !== undefined ? { forecastStartDate } : {}),
     steps,
   });
 
