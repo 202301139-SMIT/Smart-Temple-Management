@@ -1,4 +1,4 @@
-# 🔱 Tirumala Smart Pilgrimage & Temple Management
+# Tirumala Smart Pilgrimage & Temple Management
 
 An **AI-powered pilgrim footfall forecasting and decision-support system** designed to predict visitor demand at **Tirumala Tirupati** using statistical time-series models, machine learning, and deep learning.
 
